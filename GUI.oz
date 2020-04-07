@@ -2,6 +2,7 @@ functor
 import
 	QTk at 'x-oz://system/wp/QTk.ozf'
 	Input
+	System
 export
 	portWindow:StartWindow
 define
@@ -43,7 +44,6 @@ in
 		Desc=grid(handle:Grid height:500 width:500)
 		DescScore=grid(handle:GridScore height:100 width:500)
 		Window={QTk.build td(Toolbar Desc DescScore)}
-  
 		{Window show}
 
 		% configure rows and set headers
@@ -132,7 +132,7 @@ in
 			guiPlayer(id:ID score:HandleScore submarine:Handle mines:Mine path:NewPath|Path)
 		end
 	end
-  
+
 	fun{DrawMine Position}
 		fun{$ Grid State}
 			ID HandleScore Handle Mine Path LabelMine HandleMine X Y
@@ -152,8 +152,8 @@ in
 			case List
 			of nil then nil
 			[] H|T then
-				if (H.1 == Position) then
-					{RemoveItem Grid H.2}
+				if (H.2 == Position) then
+					{RemoveItem Grid H.1}
 					T
 				else
 					H|{RmMine Grid Position T}
@@ -171,7 +171,7 @@ in
 			end
 		end
 	end
-	
+
 	fun{DrawPath Grid Color X Y}
 		Handle LabelPath
 	in
@@ -179,18 +179,17 @@ in
 		{Grid.grid configure(LabelPath row:X+1 column:Y+1)}
 		Handle
 	end
-	
+
 	proc{RemoveItem Grid Handle}
 		{Grid.grid forget(Handle)}
 	end
 
-		
 	fun{RemovePath Grid State}
 		ID HandleScore Handle Mine Path
 	in
 		guiPlayer(id:ID score:HandleScore submarine:Handle mines:Mine path:Path) = State
 		for H in Path.2 do
-	 {RemoveItem Grid H}
+	  {RemoveItem Grid H}
 		end
 		guiPlayer(id:ID score:HandleScore submarine:Handle mines:Mine path:Path.1|nil)
 	end
@@ -204,7 +203,6 @@ in
 	 		State
 		end
 	end
-
 
 	fun{StateModification Grid WantedID State Fun}
 		case State
@@ -254,9 +252,11 @@ in
 	proc{TreatStream Stream Grid State}
 		case Stream
 		of nil then skip
-		[] buildWindow|T then NewGrid in 
+		[] buildWindow|T then NewGrid in
+			NewGrid = {BuildWindow}
 			{TreatStream T NewGrid State}
 		[] initPlayer(ID Position)|T then NewState in
+			{System.show guiStream#ID#Position}
 			NewState = {DrawSubmarine Grid ID Position}
 			{TreatStream T Grid NewState|State}
 		[] movePlayer(ID Position)|T then
@@ -264,7 +264,7 @@ in
 		[] lifeUpdate(ID Life)|T then
 			{TreatStream T Grid {StateModification Grid ID State {UpdateLife Life}}}
 			{TreatStream T Grid State}
-		[] putMine(ID Position)|T then 
+		[] putMine(ID Position)|T then
 			{TreatStream T Grid {StateModification Grid ID State {DrawMine Position}}}
 		[] removeMine(ID Position)|T then
 			{TreatStream T Grid {StateModification Grid ID State {RemoveMine Position}}}
