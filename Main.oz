@@ -40,13 +40,25 @@ in
         {Send GUIPort buildWindow}
 
         for P in PlayerList do
-            X Y
+            Id Pos
         in
-            {Send P initPosition(X Y)}
-            {Send GUIPort initPlayer(X Y)}
+            {Send P initPosition(Id Pos)}
+            {Send GUIPort initPlayer(Id Pos)}
         end
 
-        {Launch Input.isTurnByTurn}
+        %{Launch Input.isTurnByTurn}
+
+        {System.show sending}
+        for I in 1..5 do
+            X Y Z
+        in
+            {Delay 1000}
+            {Send {Nth PlayerList 2} move(X Y Z)}
+            {Browser.browse move(I)#X#Y#Z}
+            {Delay 1000}
+            {Send GUIPort movePlayer(X Y)}
+        end
+
 
         finished
     end
