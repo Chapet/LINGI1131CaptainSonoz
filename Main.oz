@@ -48,15 +48,18 @@ in
 
         %{Launch Input.isTurnByTurn}
 
+        {Delay 5000}
         {System.show sending}
-        for I in 1..5 do
+        for I in 1..64 do
             X Y Z
         in
-            {Delay 1000}
             {Send {Nth PlayerList 2} move(X Y Z)}
             {Browser.browse move(I)#X#Y#Z}
-            {Delay 1000}
+            {Delay 128}
+            if Z==surface then {Send GUIPort surface(X)}
+            else skip end
             {Send GUIPort movePlayer(X Y)}
+            {Delay 128}
         end
 
 
@@ -65,3 +68,4 @@ in
 
     {System.show {Main}}
 end
+
