@@ -256,7 +256,7 @@ in
 			NewGrid = {BuildWindow}
 			{TreatStream T NewGrid State}
 		[] initPlayer(ID Position)|T then NewState in
-			{System.show guiStream#ID#Position}
+			%{System.show guiStream#ID#Position}
 			NewState = {DrawSubmarine Grid ID Position}
 			{TreatStream T Grid NewState|State}
 		[] movePlayer(ID Position)|T then

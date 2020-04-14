@@ -206,18 +206,34 @@ in
         {Send GUIPort buildWindow}
 
         for P in PlayerList do % the players choose their position & appear on the grid
-            X Y
+            Id Pos
         in
-            {Send P initPosition(X Y)}
-            {Send GUIPort initPlayer(X Y)}
+            {Send P initPosition(Id Pos)}
+            {Send GUIPort initPlayer(Id Pos)}
         end
 
         if Input.isTurnByTurn then {GameTurnByTurn step1 1 {SurfaceListGen 1 nil}}
         else {GameSimultaneous PlayerList}
         end
 
+        {Delay 5000}
+        {System.show sending}
+        for I in 1..64 do
+            X Y Z
+        in
+            {Send {Nth PlayerList 2} move(X Y Z)}
+            {Browser.browse move(I)#X#Y#Z}
+            {Delay 128}
+            if Z==surface then {Send GUIPort surface(X)}
+            else skip end
+            {Send GUIPort movePlayer(X Y)}
+            {Delay 128}
+        end
+
+
         finished
     end
 
     {System.show {Main}}
 end
+
