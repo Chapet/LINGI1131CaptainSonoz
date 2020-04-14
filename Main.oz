@@ -7,11 +7,13 @@ import
 define
     GUIPort = {GUI.portWindow} % Starting the GUI port window
     PlayerList
+    PlayerDeadList
     Nth
     PlayerListGen
     SurfaceListGen
     SurfaceListModif
     NextId
+    AllDead
     BroadcastMessage
     MessageHandling
     GameTurnByTurn
@@ -62,13 +64,39 @@ in
     end
 
     fun{NextId ID}
-        A = (ID + 1) mod 4
+        A = (ID + 1) mod Input.nbPlayer
+        R
         in
         if A == 0 then
-            1
+            R = 1
         else
-            A
+            R = A
         end
+
+        if {Nth PlayerDeadList R} == ~1 then {NextId R} % checking if the player is dead
+        else R
+        end
+
+    end
+
+    fun {AllDead}
+        A
+        in
+        for J in 1::Input.nbPlayer do
+            case A
+            of false then skip
+            else
+                if {Nth PlayerDeadList J} == 0 then A = false
+                else skip
+                end
+            end
+        end
+
+        case A
+        of false then false
+        else true
+        end
+
     end
 
     proc{BroadcastMessage M} % broadcast a message to all players
@@ -81,7 +109,9 @@ in
         I
         in
         case M
-        of sayDeath(I) then {Send GUIPort removePlayer(I)}
+        of sayDeath(I) then
+            {Send GUIPort removePlayer(I)}
+            PlayerDeadList = {SurfaceListModif PlayerDeadList I 1 1}
         else skip
         end
 
@@ -90,9 +120,11 @@ in
 
     proc{GameTurnByTurn Step CurrentId Surface} %stream qui peut s'arrêter
         case Step % correspond aux steps du pdf de projet (parfois il y a plusieur steps en 1 c'est pr ça que je saute certains chiffres)
-        of nil then
+        of nil then % end of turn
             {System.show playerTurnOver#CurrentId}
-            {GameTurnByTurn step1 {NextId CurrentId} Surface} % end of turn
+            if {AllDead} then skip % if all players are dead then the procedure is over
+            else {GameTurnByTurn step1 {NextId CurrentId} Surface}
+            end
         [] H then
             case H
             of step1 then % checks if the submarine is at the surface
@@ -202,6 +234,7 @@ in
 
     fun {Main}
         PlayerList = {PlayerListGen 1 nil}
+        PlayerDeadList = {SurfaceListGen 1 nil}
 
         {Send GUIPort buildWindow}
 
