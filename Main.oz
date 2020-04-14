@@ -51,17 +51,19 @@ in
         {Delay 5000}
         {System.show sending}
         for I in 1..64 do
-            X Y Z
+            X Y Z MyPlayer = {Nth PlayerList 2}
         in
-            {Send {Nth PlayerList 2} move(X Y Z)}
-            {Browser.browse move(I)#X#Y#Z}
-            {Delay 128}
-            if Z==surface then {Send GUIPort surface(X)}
-            else skip end
-            {Send GUIPort movePlayer(X Y)}
-            {Delay 128}
+            {Send MyPlayer move(X Y Z)}
+            %{Browser.browse move(I)#X#Y#Z}
+            if Z==surface then 
+                {Send GUIPort surface(X)}
+                {Send MyPlayer chargeItem()}
+                {Delay 1024}
+                {Send MyPlayer dive}
+            else 
+                {Send GUIPort movePlayer(X Y)} 
+            end
         end
-
 
         finished
     end
