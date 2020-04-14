@@ -4,6 +4,7 @@ import
     System
     OS
     Browser
+    Number
 export
     portPlayer:StartPlayer
 define
@@ -13,6 +14,12 @@ define
     Dive
     ChargeItem
     FireItem
+    FireMine
+    IsDead
+    MissileExploded
+    MineExploded
+    PassingDrone
+    PassingSonar
 
     TreatStream
     StartPlayer
@@ -107,13 +114,13 @@ in
     end
 
 
-    fun {ChargeItem Items Charged}
-        case Items
+    fun {ChargeItem ChargingItems Charged}
+        case ChargingItems
         of H|T then
             case H
             of I#N then
                 if N==Input.I then H|{ChargeItem T Charged}
-                else (I#N+1)|T 
+                else
                     if N+1 == Input.I then 
                         Charged=I 
                         (I#N+1)|T
@@ -129,7 +136,7 @@ in
         end
     end
 
-    fun {FireItem Items Pos Fired}
+    fun {FireItem ChargingItems PlayerPos Fired}
         fun {Fire Kind}
             fun {PlaceMine}
                 X = ({OS.rand} mod Input.maxDistanceMine) + Input.minDistanceMine
@@ -137,7 +144,7 @@ in
                 SgnX = (({OS.rand} mod 2) * 2) - 1
                 SgnY = (({OS.rand} mod 2) * 2) - 1
             in
-                mine(pt(x:Pos.x + SgnX*X y:Pos.y + SgnY*Y))
+                mine(pt(x:PlayerPos.x + SgnX*X y:PlayerPos.y + SgnY*Y))
             end
             fun {LaunchMissile}
                 X = ({OS.rand} mod Input.maxDistanceMissile) + Input.minDistanceMissile
@@ -145,7 +152,7 @@ in
                 SgnX = (({OS.rand} mod 2) * 2) - 1
                 SgnY = (({OS.rand} mod 2) * 2) - 1
             in
-                missile(pt(x:Pos.x + SgnX*X y:Pos.y + SgnY*Y))
+                missile(pt(x:PlayerPos.x + SgnX*X y:PlayerPos.y + SgnY*Y))
             end
             fun {LaunchDrone}
                 B = {OS.rand} mod 2
@@ -168,16 +175,69 @@ in
             else sonar end
         end
     in
-        case Items
+        case ChargingItems
         of H|T then
             case H
             of I#N then
                 if N==Input.I then Fired={Fire I} (I#0)|T
-                else H|{FireItem T Fired} end
-            else H|{FireItem T Fired} end
+                else H|{FireItem T PlayerPos Fired} end
+            else H|{FireItem T PlayerPos Fired} end
         else 
             Fired=null 
             nil
+        end
+    end
+
+    fun {FireMine PlacedMines FiredMine}
+        case PlacedMines
+        of H|T then FiredMine=H T
+        else FiredMine=null PlacedMines end
+    end
+
+    fun {IsDead Health}
+        Health == 0
+    end
+
+    fun {MissileExploded MissilePos Player}
+        fun {TakeDamage PlayerPos}
+            Dist = {Number.abs (PlayerPos.x-MissilePos.x)} + {Number.abs (PlayerPos.y-MissilePos.y)}
+        in
+            if Dist >= 2 then 0
+            elseif Dist >= 1 then 1 
+            else 2 end
+        end
+    in
+        case Player
+        of player(pos:P map:_ state:_ health:H) then 
+            Damage = {TakeDamage P}
+        in
+            if Damage >= H then sayDeath(ID)
+            else sayDamageTaken(ID Damage H-Damage) end
+        end
+    end
+
+    fun {MineExploded MinePos Player}
+        {MissileExploded MinePos Player}
+    end
+
+    fun {PassingDrone Drone Player}
+        case Drone
+        of drone(row R) then R == Player.pos.x
+        [] drone(column C) then C == Player.pos.y
+        else false end
+    end
+
+    fun {PassingSonar Player}
+        Choose = {OS.rand} mod 2
+    in
+        if Choose < 1 then
+            R = ({OS.rand} mod Input.nRow) + 1
+        in
+            pt(x:R y:Player.pos.y)
+        else 
+            C = ({OS.rand} mod Input.nColumn) + 1
+        in
+            pt(x:Player.pos.x y:C)
         end
     end
 
@@ -220,59 +280,94 @@ in
         else {RandPosition} end
     end
 
-    proc{TreatStream Stream Pos Map State Items} % as as many parameters as you want
+    proc{TreatStream Stream Player Items} % as as many parameters as you want
         case Stream
         of nil then {System.show playerStream#'nil'} skip
         [] H|T then
-            %{Browser.browse playerStream#H}
             case H
             of initPosition(I NewPos) then
                 I = ID
                 NewPos={InitPosition}
-                {TreatStream T NewPos Input.map diving Items}
+                {TreatStream T player(pos:NewPos map:Input.map state:Player.state health:Player.health) Items}
             [] move(I NewPos Dir) then
                 NewMap NewState
             in
-                {System.show 'moving'}
-                move(pos:NewPos dir:Dir map:NewMap) = {Move Pos Map State}
-                {System.show 'moved'}
+                %{System.show 'moving'}
+                move(pos:NewPos dir:Dir map:NewMap) = {Move Player.pos Player.map Player.state}
+                %{System.show 'moved'}
 
                 I = ID
                 if Dir == surface then NewState=surface
                 else NewState=diving end
 
-                {TreatStream T NewPos NewMap NewState Items}
+                {TreatStream T player(pos:NewPos map:NewMap state:NewState health:Player.health) Items}
             [] dive then 
                 NewMap NewState
             in
-                dive(m:NewMap s:NewState) = {Dive Map State}
-                {TreatStream T Pos NewMap NewState Items}
+                dive(m:NewMap s:NewState) = {Dive Player.map Player.state}
+                {TreatStream T player(pos:Player.pos map:NewMap state:NewState health:Player.health) Items}
             [] chargeItem(I KindItem) then 
-                NewItems in
-                NewItems = {ChargeItem Items KindItem}
                 I = ID
-                {TreatStream T Pos Map State NewItems}
+                {TreatStream T Player items(charging:{ChargeItem Items.charging KindItem} placed:Items.placed)}
             [] fireItem(I KindFire) then 
-                NewItems in
-                NewItems = {ChargeItem Items KindFire}
+                NewChargingItems in
+                NewChargingItems = {FireItem Items.charging Player.pos KindFire}
                 I = ID
-                {TreatStream T Pos Map State NewItems}
-            % [] fireMine(ID Mine) then {TreatStream T Pos Map State}
-            % [] isDead(Answer) then {TreatStream T Pos Map State}
-            % [] sayMove(ID Dir) then {TreatStream T Pos Map State}
-            % [] saySurface(ID) then {TreatStream T Pos Map State}
-            % [] sayCharge(ID KindItem) then {TreatStream T Pos Map State}
-            % [] sayMinePlaced(ID) then {TreatStream T Pos Map State}
-            % [] sayMissileExplode(ID Pos Msg) then {TreatStream T Pos Map State}
-            % [] sayMineExplode(ID Pos Msg) then {TreatStream T Pos Map State}
-            % [] sayPassingDrone(Drone ID Answer) then {TreatStream T Pos Map State}
-            % [] sayAnswerDrone(Drone ID Answer) then {TreatStream T Pos Map State}
-            % [] sayPassingSonar(ID Answer) then {TreatStream T Pos Map State}
-            % [] sayAnswerSonar(ID Answer) then {TreatStream T Pos Map State}
-            % [] sayDeath(ID) then {TreatStream T Pos Map State}
-            % [] sayDamageTaken(ID Damage LifeLeft) then {TreatStream T Pos Map State}
-            else {System.show error(where:'player -> TreatStream')} {TreatStream T Pos Map State Items} end
-        else {TreatStream Stream Pos Map State Items} end
+                case KindFire 
+                of mine(_) then {TreatStream T Player items(charging:NewChargingItems placed:KindFire|Items.placed)}
+                else {TreatStream T Player items(charging:NewChargingItems placed:Items.placed)} end             
+            [] fireMine(I Mine) then 
+                NewPlacedItems = {FireMine Items.placed Mine}
+            in
+                I = ID
+                {TreatStream T Player items(charging:Items.charging placed:NewPlacedItems)}
+            [] isDead(Answer) then 
+                Answer = {IsDead Player.health}
+                {TreatStream T Player Items}
+            [] sayMove(I Dir) then 
+                % To be implemented
+                {TreatStream T Player Items}
+            [] saySurface(I) then 
+                % To be implemented
+                {TreatStream T Player Items}
+            [] sayCharge(I KindItem) then
+                % To be implemented
+                {TreatStream T Player Items}
+            [] sayMinePlaced(I) then 
+                % To be implemented
+                {TreatStream T Player Items}
+            [] sayMissileExplode(I Pos Msg) then
+                Msg = {MissileExploded Pos Player}
+                case Msg
+                of sayDamageTaken(_ _ L) then {TreatStream T player(pos:Player.pos map:Player.map state:Player.state health:L) Items}
+                else {TreatStream T player(pos:Player.pos map:Player.map state:Player.state health:0) Items} end
+            [] sayMineExplode(I Pos Msg) then 
+                Msg = {MineExploded Pos Player}
+                case Msg
+                of sayDamageTaken(_ _ L) then {TreatStream T player(pos:Player.pos map:Player.map state:Player.state health:L) Items}
+                else {TreatStream T player(pos:Player.pos map:Player.map state:Player.state health:0) Items} end
+            [] sayPassingDrone(Drone I Answer) then 
+                I = ID
+                Answer = {PassingDrone Drone Player}
+                {TreatStream T Player Items}
+            [] sayAnswerDrone(Drone I Answer) then 
+                % To be implemented
+                {TreatStream T Player Items}
+            [] sayPassingSonar(I Answer) then
+                I = ID
+                Answer = {PassingSonar Player}
+                {TreatStream T Player Items}
+            [] sayAnswerSonar(ID Answer) then
+                % To be implemented
+                {TreatStream T Player Items}
+            [] sayDeath(ID) then
+                % To be implemented
+                {TreatStream T Player Items}
+            [] sayDamageTaken(ID Damage LifeLeft) then
+                % To be implemented
+                {TreatStream T Player Items}
+            else {System.show error(where:'player -> TreatStream')} {TreatStream T Player Items} end
+        else {TreatStream Stream Player Items} end
     end
 
     fun{StartPlayer Color ID}
@@ -282,7 +377,9 @@ in
         {NewPort Stream Port}
         thread
             {InitPlayer id(id:ID color:Color name:'Name')}
-            {TreatStream Stream _ Input.map diving [mine#0 missile#0 drone#0 sonar#0]}
+            {TreatStream Stream 
+                        player(pos:_ map:Input.map state:diving health:Input.maxDamage) 
+                        items(charging:[mine#0 missile#0 drone#0 sonar#0] placed:nil)}
         end
         Port
     end

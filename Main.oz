@@ -72,7 +72,7 @@ in
     end
 
     proc{BroadcastMessage M} % broadcast a message to all players
-        for J in 1::Input.nbPlayer do
+        for J in 1..Input.nbPlayer do
             {Send {Nth PlayerList J} M}
         end
     end
@@ -137,14 +137,14 @@ in
                     {BroadcastMessage sayMinePlaced(I)}
                 [] missile(1:P) then
                     %{Send GUIPort explosion(CurrentId P)} not mandatory
-                    for J in 1::Input.nbPlayer do
+                    for J in 1..Input.nbPlayer do
                         Msg % Message
                         in
                         {Send {Nth PlayerList J} sayMissileExplode(I P Msg)}
                         {MessageHandling Msg}
                     end
                 [] drone(row:P) then
-                    for J in 1::Input.nbPlayer do
+                    for J in 1..Input.nbPlayer do
                         IdPlayer Ans % Id, Answer
                         in
                         %{Send GUIPort drone(CurrentId drone(row:P))} % not mandatory
@@ -152,7 +152,7 @@ in
                         {Send {Nth PlayerList I} sayAnswerDrone(drone(row:P) IdPlayer Ans)}
                     end
                 [] drone(column:P) then
-                    for J in 1::Input.nbPlayer do
+                    for J in 1..Input.nbPlayer do
                         IdPlayer Ans % Id, Answer
                         in
                         %{Send GUIPort drone(CurrentId drone(column:P))} % not mandatory
@@ -160,7 +160,7 @@ in
                         {Send {Nth PlayerList CurrentId} sayAnswerDrone(drone(column:P) IdPlayer Ans)}
                     end
                 [] sonar then
-                    for J in 1::Input.nbPlayer do
+                    for J in 1..Input.nbPlayer do
                         IdPlayer Ans % Id, Answer
                         in
                         %{Send GUIPort sonar(CurrentId)} % not mandatory
@@ -180,7 +180,7 @@ in
                 of mine(P) then
                     {Send GUIPort removeMine(I P)}
                     %{Send GUIPort explosion(CurrentId P)} not mandatory
-                    for J in 1::Input.nbPlayer do
+                    for J in 1..Input.nbPlayer do
                         Mes % Message
                         in
                         {Send {Nth PlayerList J} sayMineExplode(I P Mes)}
