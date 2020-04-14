@@ -175,21 +175,21 @@ in
             []step8 then
                 I M % Id, Mine
                 in
-                {Send {Nth PlayerList CurrentId} fireMine(I M)}
+                {Send {Nth PlayerList I} fireMine(I M)}
                 case M
                 of mine(P) then
-                    {Send GUIPort removeMine(CurrentId P)}
+                    {Send GUIPort removeMine(I P)}
                     %{Send GUIPort explosion(CurrentId P)} not mandatory
                     for J in 1::Input.nbPlayer do
                         Mes % Message
                         in
-                        {Send {Nth PlayerList J} sayMineExplode(CurrentId P Mes)}
+                        {Send {Nth PlayerList J} sayMineExplode(I P Mes)}
                         {MessageHandling Mes}
                     end
                 else % Mine = null, the player didn't detonated one of his mines
                     skip
                 end
-                {GameTurnByTurn nil CurrentId Surface}
+                {GameTurnByTurn nil I Surface}
             else {System.show gameStepError#H}
             end
         else {System.show gameStepError}
@@ -216,7 +216,7 @@ in
         else {GameSimultaneous PlayerList}
         end
 
-        {Delay 5000}
+        /*{Delay 5000}
         {System.show sending}
         for I in 1..64 do
             X Y Z
@@ -228,7 +228,7 @@ in
             else skip end
             {Send GUIPort movePlayer(X Y)}
             {Delay 128}
-        end
+        end*/
 
 
         finished
@@ -236,4 +236,3 @@ in
 
     {System.show {Main}}
 end
-
