@@ -107,80 +107,77 @@ in
     end
 
 
-    fun {ChargeItem Items}
+    fun {ChargeItem Items Charged}
         case Items
-        of items(mines#N1 missiles#N2 drones#N3 sonars#N4) then
-            R = {OS.rand} mod 4
-            N
-        in
-            if R < 1 then 
-                N = (N1 mod Input.mine)+1
-                if N >= Input.mine then charged(mine items(mines#N missiles#N2 drones#N3 sonars#N4))
-                else charged(null items(mines#N missiles#N2 drones#N3 sonars#N4)) end
-            elseif R < 2 then 
-                N = (N2 mod Input.missile)+1
-                if N >= Input.missile then charged(missile items(mines#N1 missiles#N drones#N3 sonars#N4))
-                else charged(null items(mines#N1 missiles#N drones#N3 sonars#N4)) end
-            elseif R < 3 then 
-                N = (N3 mod Input.drone)+1
-                if N >= Input.drone then charged(drone items(mines#N1 missiles#N2 drones#N sonars#N4))
-                else charged(null items(mines#N1 missiles#N2 drones#N sonars#N4)) end
-            else
-                N = (N4 mod Input.sonar)+1
-                if N >= Input.sonar then charged(sonar items(mines#N1 missiles#N2 drones#N3 sonars#N))
-                else charged(null items(mines#N1 missiles#N2 drones#N3 sonars#N)) end
-            end
+        of H|T then
+            case H
+            of I#N then
+                if N==Input.I then H|{ChargeItem T Charged}
+                else (I#N+1)|T 
+                    if N+1 == Input.I then 
+                        Charged=I 
+                        (I#N+1)|T
+                    else 
+                        Charged=null 
+                        (I#N+1)|T
+                    end
+                end
+            else H|{ChargeItem T Charged} end
+        else 
+            Charged=null 
+            nil
         end
     end
 
-    fun {FireItem Items Pos}
-        fun {PlaceMine}
-            X = ({OS.rand} mod Input.maxDistanceMine) + Input.minDistanceMine
-            Y = ({OS.rand} mod (Input.maxDistanceMine - X)) + Input.minDistanceMine
-            SgnX = (({OS.rand} mod 2) * 2) - 1
-            SgnY = (({OS.rand} mod 2) * 2) - 1
-        in
-            mine(pt(x:Pos.x + SgnX*X y:Pos.y + SgnY*Y))
-        end
-        fun {LaunchMissile}
-            X = ({OS.rand} mod Input.maxDistanceMissile) + Input.minDistanceMissile
-            Y = ({OS.rand} mod (Input.maxDistanceMissile - X)) + Input.minDistanceMissile
-            SgnX = (({OS.rand} mod 2) * 2) - 1
-            SgnY = (({OS.rand} mod 2) * 2) - 1
-        in
-            missile(pt(x:Pos.x + SgnX*X y:Pos.y + SgnY*Y))
-        end
-        fun {LaunchDrone}
-            B = {OS.rand} mod 2
-        in
-            if B < 1 then
-                Row = ({OS.rand} mod Input.nRow) + 1
+    fun {FireItem Items Pos Fired}
+        fun {Fire Kind}
+            fun {PlaceMine}
+                X = ({OS.rand} mod Input.maxDistanceMine) + Input.minDistanceMine
+                Y = ({OS.rand} mod (Input.maxDistanceMine - X)) + Input.minDistanceMine
+                SgnX = (({OS.rand} mod 2) * 2) - 1
+                SgnY = (({OS.rand} mod 2) * 2) - 1
             in
-                drone(row Row)
-            else 
-                Column = ({OS.rand} mod Input.nColumn) + 1
-            in
-                drone(column Column)
+                mine(pt(x:Pos.x + SgnX*X y:Pos.y + SgnY*Y))
             end
+            fun {LaunchMissile}
+                X = ({OS.rand} mod Input.maxDistanceMissile) + Input.minDistanceMissile
+                Y = ({OS.rand} mod (Input.maxDistanceMissile - X)) + Input.minDistanceMissile
+                SgnX = (({OS.rand} mod 2) * 2) - 1
+                SgnY = (({OS.rand} mod 2) * 2) - 1
+            in
+                missile(pt(x:Pos.x + SgnX*X y:Pos.y + SgnY*Y))
+            end
+            fun {LaunchDrone}
+                B = {OS.rand} mod 2
+            in
+                if B < 1 then
+                    Row = ({OS.rand} mod Input.nRow) + 1
+                in
+                    drone(row Row)
+                else 
+                    Column = ({OS.rand} mod Input.nColumn) + 1
+                in
+                    drone(column Column)
+                end
+            end
+        in
+            case Kind
+            of mine then {PlaceMine}
+            [] missile then {LaunchMissile}
+            [] drone then {LaunchDrone}
+            else sonar end
         end
     in
         case Items
-        of items(mines#N1 missiles#N2 drones#N3 sonars#N4) then
-            R = {OS.rand} mod 4
-        in
-            if R < 1 then 
-                if N1 >= Input.mine then fired({PlaceMine} items(mines#(N1-Input.mine) missiles#N2 drones#N3 sonars#N4))
-                else fired(null Items) end
-            elseif R < 2 then 
-                if N2 >= Input.missile then fired({LaunchMissile} items(mines#N1 missiles#(N2-Input.missile) drones#N3 sonars#N4))
-                else fired(null Items) end
-            elseif R < 3 then 
-                if N3 >= Input.drone then fired({LaunchDrone} items(mines#N1 missiles#N2 drones#(N3-Input.drone) sonars#N4))
-                else fired(null Items) end
-            else
-                if N4 >= Input.sonar then fired(sonar items(mines#N1 missiles#N2 drones#N3 sonars#(N4-Input.sonar)))
-                else fired(null Items) end
-            end
+        of H|T then
+            case H
+            of I#N then
+                if N==Input.I then Fired={Fire I} (I#0)|T
+                else H|{FireItem T Fired} end
+            else H|{FireItem T Fired} end
+        else 
+            Fired=null 
+            nil
         end
     end
 
@@ -250,13 +247,15 @@ in
             in
                 dive(m:NewMap s:NewState) = {Dive Map State}
                 {TreatStream T Pos NewMap NewState Items}
-            [] chargeItem(ID KindItem) then 
+            [] chargeItem(I KindItem) then 
                 NewItems in
-                charged(KindItem NewItems) = {ChargeItem Items}
+                NewItems = {ChargeItem Items KindItem}
+                I = ID
                 {TreatStream T Pos Map State NewItems}
-            [] fireItem(ID KindFire) then 
+            [] fireItem(I KindFire) then 
                 NewItems in
-                fired(KindFire NewItems) = {ChargeItem Items}
+                NewItems = {ChargeItem Items KindFire}
+                I = ID
                 {TreatStream T Pos Map State NewItems}
             % [] fireMine(ID Mine) then {TreatStream T Pos Map State}
             % [] isDead(Answer) then {TreatStream T Pos Map State}
@@ -283,7 +282,7 @@ in
         {NewPort Stream Port}
         thread
             {InitPlayer id(id:ID color:Color name:'Name')}
-            {TreatStream Stream _ Input.map diving items(mines#0 missiles#0 drones#0 sonars#0)}
+            {TreatStream Stream _ Input.map diving [mine#0 missile#0 drone#0 sonar#0]}
         end
         Port
     end
