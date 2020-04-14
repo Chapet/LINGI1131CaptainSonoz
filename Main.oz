@@ -74,40 +74,29 @@ in
         end
 
         if {Nth PlayerDeadList R} == ~1 then {NextId R} % checking if the player is dead
-        else R
+        else R % the player is alive and can play
         end
 
     end
 
-    fun {AllDead}
-        A
-        in
-        for J in 1::Input.nbPlayer do
-            case A
-            of false then skip
-            else
-                if {Nth PlayerDeadList J} == 0 then A = false
-                else skip
-                end
+    fun {AllDead L}
+        case L
+        of nil then true
+        [] H|T then
+            if H == 0 then false
+            else {AllDead T}
             end
-        end
-
-        case A
-        of false then false
         else true
         end
-
     end
 
     proc{BroadcastMessage M} % broadcast a message to all players
-        for J in 1::Input.nbPlayer do
+        for J in 1..Input.nbPlayer do
             {Send {Nth PlayerList J} M}
         end
     end
 
     proc{MessageHandling M}
-        I
-        in
         case M
         of sayDeath(I) then
             {Send GUIPort removePlayer(I)}
@@ -122,7 +111,7 @@ in
         case Step % correspond aux steps du pdf de projet (parfois il y a plusieur steps en 1 c'est pr ça que je saute certains chiffres)
         of nil then % end of turn
             {System.show playerTurnOver#CurrentId}
-            if {AllDead} then skip % if all players are dead then the procedure is over
+            if {AllDead PlayerDeadList} then skip % if all players are dead then the procedure is over
             else {GameTurnByTurn step1 {NextId CurrentId} Surface}
             end
         [] H then
@@ -160,7 +149,7 @@ in
                 end
                 {GameTurnByTurn step7 I Surface}
             [] step7 then % the submarine is authorised to fire an item
-                I K P % id, kindFire, Position/Row/Column
+                I K % id, kindFire, P in all the below: Position/Row/Column
                 in
                 {Send  {Nth PlayerList I} fireItem(I K)}
                 case K
@@ -169,14 +158,14 @@ in
                     {BroadcastMessage sayMinePlaced(I)}
                 [] missile(1:P) then
                     %{Send GUIPort explosion(CurrentId P)} not mandatory
-                    for J in 1::Input.nbPlayer do
+                    for J in 1..Input.nbPlayer do
                         Msg % Message
                         in
                         {Send {Nth PlayerList J} sayMissileExplode(I P Msg)}
                         {MessageHandling Msg}
                     end
                 [] drone(row:P) then
-                    for J in 1::Input.nbPlayer do
+                    for J in 1..Input.nbPlayer do
                         IdPlayer Ans % Id, Answer
                         in
                         %{Send GUIPort drone(CurrentId drone(row:P))} % not mandatory
@@ -184,7 +173,7 @@ in
                         {Send {Nth PlayerList I} sayAnswerDrone(drone(row:P) IdPlayer Ans)}
                     end
                 [] drone(column:P) then
-                    for J in 1::Input.nbPlayer do
+                    for J in 1..Input.nbPlayer do
                         IdPlayer Ans % Id, Answer
                         in
                         %{Send GUIPort drone(CurrentId drone(column:P))} % not mandatory
@@ -192,7 +181,7 @@ in
                         {Send {Nth PlayerList CurrentId} sayAnswerDrone(drone(column:P) IdPlayer Ans)}
                     end
                 [] sonar then
-                    for J in 1::Input.nbPlayer do
+                    for J in 1..Input.nbPlayer do
                         IdPlayer Ans % Id, Answer
                         in
                         %{Send GUIPort sonar(CurrentId)} % not mandatory
@@ -212,7 +201,7 @@ in
                 of mine(P) then
                     {Send GUIPort removeMine(I P)}
                     %{Send GUIPort explosion(CurrentId P)} not mandatory
-                    for J in 1::Input.nbPlayer do
+                    for J in 1..Input.nbPlayer do
                         Mes % Message
                         in
                         {Send {Nth PlayerList J} sayMineExplode(I P Mes)}
