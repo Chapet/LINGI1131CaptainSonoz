@@ -50,8 +50,7 @@ in
         case {Nth L C}
         of nil then nil
         else
-            case C
-            of Id then
+            if(C == Id) then
                 case M
                 of 1 then ~1|{SurfaceListModif L Id M C+1}
                 [] 2 then Input.turnSurface-1|{SurfaceListModif L Id M C+1}
@@ -67,10 +66,8 @@ in
         A = (ID + 1) mod Input.nbPlayer
         R
         in
-        if A == 0 then
-            R = 1
-        else
-            R = A
+        if A == 0 then R = Input.nbPlayer
+        else R = A
         end
 
         if {Nth PlayerDeadList R} == ~1 then {NextId R} % checking if the player is dead
@@ -107,40 +104,46 @@ in
         {BroadcastMessage M} % in all cases (death or damageTaken, the message is broadcasted to all players)
     end
 
-    proc{GameTurnByTurn Step CurrentId Surface} %stream qui peut s'arrêter
+    proc{GameTurnByTurn Step CurrentId Surface} % similar to a stream in the way it works
         case Step % correspond aux steps du pdf de projet (parfois il y a plusieur steps en 1 c'est pr ça que je saute certains chiffres)
-        of nil then % end of turn
+        of endTurn then % end of turn
             {System.show playerTurnOver#CurrentId}
             if {AllDead PlayerDeadList} then skip % if all players are dead then the procedure is over
-            else {GameTurnByTurn step1 {NextId CurrentId} Surface}
+            else {System.show Surface#atEndTurn} {GameTurnByTurn step1 {NextId CurrentId} Surface}
             end
         [] H then
             case H
             of step1 then % checks if the submarine is at the surface
                 if {Nth Surface CurrentId} == 0 then % it is the firt turn / the submarine has finished waiting and is granted the permission to dive
                     {Send {Nth PlayerList CurrentId} dive}
-                    {GameTurnByTurn nil CurrentId {SurfaceListModif Surface CurrentId 1 1}} % the CurrentId element of surface is -1
+                    {GameTurnByTurn endTurn CurrentId {SurfaceListModif Surface CurrentId 1 1}} % the CurrentId element of surface is -1
                 elseif {Nth Surface CurrentId} > 0 then % the submarine is at the surface and still has to wait
-                    {GameTurnByTurn nil CurrentId {SurfaceListModif Surface CurrentId 3 1}}
+                    {GameTurnByTurn endTurn CurrentId {SurfaceListModif Surface CurrentId 3 1}}
                 else {GameTurnByTurn step3 CurrentId Surface} %the submarine is underwater (Surface == -1) and can carry on with his turn
                 end
             [] step3 then %asks the submarine to choose his directions
                 I P D % id, new position and direction
                 in
+                {System.show CurrentId#atStep3}
                 {Send {Nth PlayerList CurrentId} move(I P D)}
+                {Delay 5000}
+                {System.show move(I P D)#CurrentId}
                 case D
                 of surface then
                     {Send GUIPort surface(I)}
                     {BroadcastMessage saySurface(I)}
-                    {GameTurnByTurn nil CurrentId {SurfaceListModif Surface CurrentId 2 1}} % the turn is over and counts as the first turn spend at the surface
+                    {System.show {SurfaceListModif Surface CurrentId 2 1}}
+                    {GameTurnByTurn endTurn CurrentId {SurfaceListModif Surface CurrentId 2 1}} % the turn is over and counts as the first turn spend at the surface
                 else % north east south west
                     {Send GUIPort movePlayer(I P)}
                     {BroadcastMessage sayMove(I P)}
+                    {System.show Surface}
                     {GameTurnByTurn step6 I Surface}
                 end
             [] step6 then % the submarine is authorised to charge an item
                 I K % id, kindItem
                 in
+                {System.show heyStep6Here#CurrentId}
                 {Send  {Nth PlayerList I} chargeItem(I K)}
                 case K
                 of null then skip % no item was produced so there is no radio broadcast
@@ -210,7 +213,7 @@ in
                 else % Mine = null, the player didn't detonated one of his mines
                     skip
                 end
-                {GameTurnByTurn nil I Surface}
+                {GameTurnByTurn endTurn I Surface}
             else {System.show gameStepError#H}
             end
         else {System.show gameStepError}
