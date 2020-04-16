@@ -49,16 +49,16 @@ in
 
 %%%% Description of the map %%%%
 
-   NRow = 6 %10
-   NColumn = 6 %10
+   NRow = 10
+   NColumn = 10
 
-   Map = [[0 0 0 0 0 0]
+   /*Map = [[0 0 0 0 0 0]
           [0 0 0 0 0 0]
           [0 0 0 1 1 0]
           [0 0 1 1 0 0]
           [0 0 0 0 0 0]
           [0 0 0 0 0 0]]
-/*
+*/
    Map = [[0 0 0 0 0 0 0 0 0 0]
       	  [0 0 0 0 0 0 0 0 0 0]
       	  [0 0 0 1 1 0 0 0 0 0]
@@ -69,12 +69,11 @@ in
       	  [0 0 1 1 0 0 1 0 0 0]
       	  [0 0 0 0 0 0 0 0 0 0]
       	  [0 0 0 0 0 0 0 0 0 0]]
-*/
 
 %%%% Players description %%%%
 
    NbPlayer = 3
-   Players = [player1 player2 player3]
+   Players = [player1 player1 player1]
    Colors = [yellow green red]
 
 %%%% Thinking parameters (only in simultaneous) %%%%
@@ -88,7 +87,7 @@ in
 
 %%%% Life %%%%
 
-   MaxDamage = 4
+   MaxDamage = 1
 
 %%%% Number of load for each item %%%%
 

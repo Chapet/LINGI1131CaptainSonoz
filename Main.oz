@@ -32,8 +32,8 @@ in
     fun {PlayerListGen I A}
         if I>Input.nbPlayer then A
         else
-            P = {PlayerManager.playerGenerator {Nth Input.players I} {Nth Input.colors I} I}
-        in
+            P = {PlayerManager.playerGenerator {Nth Input.players Input.nbPlayer+1-I} {Nth Input.colors Input.nbPlayer+1-I} Input.nbPlayer+1-I}
+            in
             {PlayerListGen I+1 P|A}
         end
     end
@@ -86,20 +86,22 @@ in
         N
     in
         N = {Sum L 0}
-        (N + Input.nbPlayer) == 1
+        (N + Input.nbPlayer) =< 1
     end
 
-    proc{BroadcastMessage M} % broadcast a message to all players
+    proc{BroadcastMessage M PlayerDeadList} % broadcast a message to all players
         % TODO : maybe use a thread to be sure that Send does not block
-        % thread 
+        % thread
             for J in 1..Input.nbPlayer do
-                {Send {Nth PlayerList J} M}
+                if  {Nth PlayerDeadList J} == ~1 then
+                    {Send {Nth PlayerList J} M}
+                else skip end
             end
         % end
     end
 
     fun{MessageHandling M PlayerDeadList}
-        {BroadcastMessage M} % in all cases (death or damageTaken, the message is broadcasted to all players)
+        {BroadcastMessage M PlayerDeadList} % in all cases (death or damageTaken, the message is broadcasted to all players)
         case M
         of sayDeath(I) then
             Tmp
@@ -107,13 +109,13 @@ in
             {System.show death#I#1}
             {Send GUIPort removePlayer(I)}
             {System.show death#I#2}
-            Tmp = {SurfaceListModif PlayerDeadList I 1 1}
+            Tmp = {SurfaceListModif PlayerDeadList I.id 1 1}
             {System.show death#I#3}
             Tmp
-        [] sayDamageTaken(I _ Life) then 
-            {Send GUIPort lifeUpdate(I Life)}  
+        [] sayDamageTaken(I _ Life) then
+            {Send GUIPort lifeUpdate(I Life)}
             PlayerDeadList
-        else 
+        else
             PlayerDeadList
         end
     end
@@ -127,137 +129,139 @@ in
             of mine then
                 {System.show explosionHandling#mine#I}
                 {Send {Nth PlayerList I} sayMineExplode(AttackerID Position Mes)}
-                {ExplosionHandling Kind {MessageHandling Mes PlayerDeadList} I+1 AttackerID Position}        
-            else 
+                {ExplosionHandling Kind {MessageHandling Mes PlayerDeadList} I+1 AttackerID Position}
+            else  % missile
                 {System.show explosionHandling#missile#I}
                 {Send {Nth PlayerList I} sayMissileExplode(AttackerID Position Mes)}
-                {ExplosionHandling Kind {MessageHandling Mes PlayerDeadList} I+1 AttackerID Position}      
+                {ExplosionHandling Kind {MessageHandling Mes PlayerDeadList} I+1 AttackerID Position}
             end
         end
     end
 
     proc{GameTurnByTurn Step CurrentId Surface PlayerDeadList} % similar to a stream in the way it works
-        case Step % correspond aux steps du pdf de projet (parfois il y a plusieur steps en 1 c'est pr ça que je saute certains chiffres)
-        of endTurn then % end of turn
-            {System.show playerTurnOver#CurrentId}
-            %{Delay Input.guiDelay}
-            if {LastSurvivor PlayerDeadList} then 
-                {System.show thisIsTheEnd}
-                skip % if all players are dead then the procedure is over
-            else 
-                %{System.show Surface#atEndTurn} 
-                {GameTurnByTurn step1 {NextId CurrentId PlayerDeadList} Surface PlayerDeadList}
-            end
-        [] H then
-            case H
-            of step1 then % checks if the submarine is at the surface
-                {System.show step1#CurrentId}
-                if {Nth Surface CurrentId} == 0 then % it is the firt turn / the submarine has finished waiting and is granted the permission to dive
-                    {Send {Nth PlayerList CurrentId} dive}
-                    {GameTurnByTurn endTurn CurrentId {SurfaceListModif Surface CurrentId 1 1} PlayerDeadList} % the CurrentId element of surface is -1
-                elseif {Nth Surface CurrentId} > 0 then % the submarine is at the surface and still has to wait
-                    {GameTurnByTurn endTurn CurrentId {SurfaceListModif Surface CurrentId 3 1} PlayerDeadList}
-                else {GameTurnByTurn step3 CurrentId Surface PlayerDeadList} %the submarine is underwater (Surface == -1) and can carry on with his turn
-                end
-            [] step3 then %asks the submarine to choose his directions
-                I P D % id, new position and direction
-                in
-                {System.show step3#CurrentId}
-                %{System.show CurrentId#atStep3}
-                {Send {Nth PlayerList CurrentId} move(I P D)}
-                %{System.show move(I P D)#CurrentId}
-                case D
-                of surface then
-                    {System.show surface#I}
-                    {Send GUIPort surface(I)}
-                    {BroadcastMessage saySurface(I)}
-                    %{System.show {SurfaceListModif Surface CurrentId 2 1}}
-                    {GameTurnByTurn endTurn CurrentId {SurfaceListModif Surface CurrentId 2 1} PlayerDeadList} % the turn is over and counts as the first turn spend at the surface
-                else % north east south west
-                    {System.show dive#I}
-                    {Send GUIPort movePlayer(I P)}
-                    {BroadcastMessage sayMove(I P)}
-                    %{System.show Surface}
-                    {GameTurnByTurn step6 CurrentId Surface PlayerDeadList}
-                end
-            [] step6 then % the submarine is authorised to charge an item
-                I K % id, kindItem
-                in
-                {System.show step6#CurrentId}
-                %{System.show heyStep6Here#CurrentId}
-                {Send  {Nth PlayerList CurrentId} chargeItem(I K)}
-                case K
-                of null then skip % no item was produced so there is no radio broadcast
-                else % an item reached the amount of load(s) necessary to be produced
-                  {BroadcastMessage sayCharge(I K)}
-                end
-                {GameTurnByTurn step7 CurrentId Surface PlayerDeadList}
-            [] step7 then % the submarine is authorised to fire an item
-                I K NewPlayerDeadList % id, kindFire, P in all the below: Position/Row/Column
-                in
-                {System.show step7#CurrentId}
-                {Send  {Nth PlayerList CurrentId} fireItem(I K)}
-                case K
-                of mine(1:P) then
-                    {Send GUIPort putMine(I P)}
-                    {BroadcastMessage sayMinePlaced(I)}
-                    NewPlayerDeadList = PlayerDeadList
-                [] missile(1:P) then
-                    {Send GUIPort explosion(I P)} %not mandatory
-                    {System.show explosionHandling#missile#before}
-                    NewPlayerDeadList = {ExplosionHandling missile PlayerDeadList 1 I P}
-                    {System.show explosionHandling#missile#after}
-                [] drone(row:P) then
-                    for J in 1..Input.nbPlayer do
-                        IdPlayer Ans % Id, Answer
-                        in
-                        %{Send GUIPort drone(CurrentId drone(row:P))} % not mandatory
-                        {Send {Nth PlayerList J} sayPassingDrone(drone(row:P) IdPlayer Ans)}
-                        {Send {Nth PlayerList CurrentId} sayAnswerDrone(drone(row:P) IdPlayer Ans)}
+        if {LastSurvivor PlayerDeadList} then {System.show thisIsTheEndOOOOOOOOOOOOO}
+        else
+            if {Nth PlayerDeadList CurrentId} == ~1 then {GameTurnByTurn step1 {NextId CurrentId PlayerDeadList} Surface PlayerDeadList}
+            else
+                case Step % correspond aux steps du pdf de projet (parfois il y a plusieur steps en 1 c'est pr ça que je saute certains chiffres)
+                of endTurn then % end of turn
+                    {System.show playerTurnOver#CurrentId}
+                    %{Delay Input.guiDelay}
+                    if {LastSurvivor PlayerDeadList} then
+                        {System.show thisIsTheEnd} % if all players are dead then the procedure is over
+                    else
+                        %{System.show Surface#atEndTurn}
+                        {GameTurnByTurn step1 {NextId CurrentId PlayerDeadList} Surface PlayerDeadList}
                     end
-                    NewPlayerDeadList = PlayerDeadList
-                [] drone(column:P) then
-                    for J in 1..Input.nbPlayer do
-                        IdPlayer Ans % Id, Answer
+                [] H then
+                    case H
+                    of step1 then % checks if the submarine is at the surface
+                        {System.show step1#CurrentId}
+                        if {Nth Surface CurrentId} == 0 then % it is the firt turn / the submarine has finished waiting and is granted the permission to dive
+                            {Send {Nth PlayerList CurrentId} dive}
+                            {GameTurnByTurn endTurn CurrentId {SurfaceListModif Surface CurrentId 1 1} PlayerDeadList} % the CurrentId element of surface is -1
+                        elseif {Nth Surface CurrentId} > 0 then % the submarine is at the surface and still has to wait
+                            {GameTurnByTurn endTurn CurrentId {SurfaceListModif Surface CurrentId 3 1} PlayerDeadList}
+                        else {GameTurnByTurn step3 CurrentId Surface PlayerDeadList} %the submarine is underwater (Surface == -1) and can carry on with his turn
+                        end
+                    [] step3 then %asks the submarine to choose his directions
+                        I P D % id, new position and direction
                         in
-                        %{Send GUIPort drone(CurrentId drone(column:P))} % not mandatory
-                        {Send {Nth PlayerList J} sayPassingDrone(drone(column:P) IdPlayer Ans)}
-                        {Send {Nth PlayerList CurrentId} sayAnswerDrone(drone(column:P) IdPlayer Ans)}
-                    end
-                    NewPlayerDeadList = PlayerDeadList
-                [] sonar then
-                    for J in 1..Input.nbPlayer do
-                        IdPlayer Ans % Id, Answer
+                        {System.show step3#CurrentId}
+                        {Send {Nth PlayerList CurrentId} move(I P D)}
+                        case D
+                        of surface then
+                            {System.show surface#I}
+                            {Send GUIPort surface(I)}
+                            {BroadcastMessage saySurface(I) PlayerDeadList}
+                            {GameTurnByTurn endTurn CurrentId {SurfaceListModif Surface CurrentId 2 1} PlayerDeadList} % the turn is over and counts as the first turn spend at the surface
+                        else % north east south west
+                            {Send GUIPort movePlayer(I P)}
+                            {BroadcastMessage sayMove(I P) PlayerDeadList}
+                            {GameTurnByTurn step6 CurrentId Surface PlayerDeadList}
+                        end
+                    [] step6 then % the submarine is authorised to charge an item
+                        I K % id, kindItem
                         in
-                        %{Send GUIPort sonar(CurrentId)} % not mandatory
-                        {Send {Nth PlayerList J} sayPassingSonar(IdPlayer Ans)}
-                        {Send {Nth PlayerList CurrentId} sayAnswerSonar(IdPlayer Ans)}
-                    end
-                    NewPlayerDeadList = PlayerDeadList
-                else % K== null no item was fired
-                    NewPlayerDeadList = PlayerDeadList
-                end
-                {GameTurnByTurn step8 CurrentId Surface NewPlayerDeadList}
+                        {System.show step6#CurrentId}
+                        %{System.show heyStep6Here#CurrentId}
+                        {Send  {Nth PlayerList CurrentId} chargeItem(I K)}
+                        case K
+                        of null then skip % no item was produced so there is no radio broadcast
+                        else % an item reached the amount of load(s) necessary to be produced
+                          {BroadcastMessage sayCharge(I K) PlayerDeadList}
+                        end
+                        {GameTurnByTurn step7 CurrentId Surface PlayerDeadList}
+                    [] step7 then % the submarine is authorised to fire an item
+                        I K NewPlayerDeadList % id, kindFire, P in all the below: Position/Row/Column
+                        in
+                        {System.show step7#CurrentId}
+                        {Send  {Nth PlayerList CurrentId} fireItem(I K)}
+                        {System.show leIrenvoyeEst#I}
+                        case K
+                        of mine(1:P) then
+                            {Send GUIPort putMine(I P)}
+                            {BroadcastMessage sayMinePlaced(I) PlayerDeadList}
+                            NewPlayerDeadList = PlayerDeadList
+                        [] missile(1:P) then
+                            {Send GUIPort explosion(I P)} %not mandatory
+                            {System.show explosionHandling#missile#before}
+                            NewPlayerDeadList = {ExplosionHandling missile PlayerDeadList 1 I P}
+                            {System.show explosionHandling#missile#after}
+                        [] drone(row:P) then
+                            for J in 1..Input.nbPlayer do
+                                IdPlayer Ans % Id, Answer
+                                in
+                                %{Send GUIPort drone(CurrentId drone(row:P))} % not mandatory
+                                {Send {Nth PlayerList J} sayPassingDrone(drone(row:P) IdPlayer Ans)}
+                                {Send {Nth PlayerList CurrentId} sayAnswerDrone(drone(row:P) IdPlayer Ans)}
+                            end
+                            NewPlayerDeadList = PlayerDeadList
+                        [] drone(column:P) then
+                            for J in 1..Input.nbPlayer do
+                                IdPlayer Ans % Id, Answer
+                                in
+                                %{Send GUIPort drone(CurrentId drone(column:P))} % not mandatory
+                                {Send {Nth PlayerList J} sayPassingDrone(drone(column:P) IdPlayer Ans)}
+                                {Send {Nth PlayerList CurrentId} sayAnswerDrone(drone(column:P) IdPlayer Ans)}
+                            end
+                            NewPlayerDeadList = PlayerDeadList
+                        [] sonar then
+                            for J in 1..Input.nbPlayer do
+                                IdPlayer Ans % Id, Answer
+                                in
+                                %{Send GUIPort sonar(CurrentId)} % not mandatory
+                                {Send {Nth PlayerList J} sayPassingSonar(IdPlayer Ans)}
+                                {Send {Nth PlayerList CurrentId} sayAnswerSonar(IdPlayer Ans)}
+                            end
+                            NewPlayerDeadList = PlayerDeadList
+                        else % K== null no item was fired
+                            NewPlayerDeadList = PlayerDeadList
+                        end
+                        {GameTurnByTurn step8 CurrentId Surface NewPlayerDeadList}
 
-            []step8 then
-                I M NewPlayerDeadList % Id, Mine
-                in
-                {System.show step8#CurrentId}
-                {Send {Nth PlayerList CurrentId} fireMine(I M)}
-                case M
-                of mine(P) then
-                    {Send GUIPort removeMine(I P)}
-                    {Send GUIPort explosion(I P)} %not mandatory
-                    {System.show explosionHandling#mine#before}
-                    NewPlayerDeadList = {ExplosionHandling mine PlayerDeadList 1 I P}
-                    {System.show explosionHandling#mine#after}
-                else % Mine = null, the player didn't detonated one of his mines
-                    NewPlayerDeadList = PlayerDeadList
+                    []step8 then
+                        I M NewPlayerDeadList % Id, Mine
+                        in
+                        {System.show step8#CurrentId}
+                        {System.show PlayerDeadList}
+                        {Send {Nth PlayerList CurrentId} fireMine(I M)}
+                        case M
+                        of mine(P) then
+                            {Send GUIPort removeMine(I P)}
+                            {Send GUIPort explosion(I P)} %not mandatory
+                            {System.show explosionHandling#mine#before}
+                            NewPlayerDeadList = {ExplosionHandling mine PlayerDeadList 1 I P}
+                            {System.show explosionHandling#mine#after}
+                        else % Mine = null, the player didn't detonated one of his mines
+                            NewPlayerDeadList = PlayerDeadList
+                        end
+                        {GameTurnByTurn endTurn CurrentId Surface NewPlayerDeadList}
+                    else {System.show gameStepError#H}
+                    end
+                else {System.show gameStepError}
                 end
-                {GameTurnByTurn endTurn CurrentId Surface NewPlayerDeadList}
-            else {System.show gameStepError#H}
             end
-        else {System.show gameStepError}
         end
     end
 
@@ -268,6 +272,8 @@ in
     fun {Main}
         PlayerList = {PlayerListGen 1 nil}
 
+        {System.show PlayerList}
+
         {Send GUIPort buildWindow}
 
         for P in PlayerList do % the players choose their position & appear on the grid
@@ -277,27 +283,13 @@ in
             {Send GUIPort initPlayer(Id Pos)}
         end
 
-        if Input.isTurnByTurn then 
+        if Input.isTurnByTurn then
             {GameTurnByTurn step1 1 {SurfaceListGen 1 nil} {SurfaceListGen 1 nil}}
-        else 
+        else
             {GameSimultaneous PlayerList}
         end
 
-        /*{Delay 5000}
-        {System.show sending}
-        for I in 1..64 do
-            X Y Z MyPlayer = {Nth PlayerList 2}
-        in
-            {Send {Nth PlayerList 2} move(X Y Z)}
-            {Browser.browse move(I)#X#Y#Z}
-            {Delay 128}
-            if Z==surface then {Send GUIPort surface(X)}
-            else skip end
-            {Send GUIPort movePlayer(X Y)}
-            {Delay 128}
-        end*/
-        {Delay 4096}
-        {Browser.browse nope}
+        {Delay Input.guiDelay}
         'OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO'
     end
 
