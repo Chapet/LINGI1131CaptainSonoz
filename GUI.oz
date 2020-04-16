@@ -273,6 +273,7 @@ in
 		[] removePlayer(ID)|T then
 			{TreatStream T Grid {RemovePlayer Grid ID State}}
 		[] explosion(ID Position)|T then
+			{System.show 'BOOOOM ... explosion by'#ID#Position}
 			{TreatStream T Grid State}
 		[] drone(ID Drone)|T then
 			{TreatStream T Grid State}

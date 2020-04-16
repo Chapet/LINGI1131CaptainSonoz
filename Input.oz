@@ -49,9 +49,16 @@ in
 
 %%%% Description of the map %%%%
 
-   NRow = 10
-   NColumn = 10
+   NRow = 6 %10
+   NColumn = 6 %10
 
+   Map = [[0 0 0 0 0 0]
+          [0 0 0 0 0 0]
+          [0 0 0 1 1 0]
+          [0 0 1 1 0 0]
+          [0 0 0 0 0 0]
+          [0 0 0 0 0 0]]
+/*
    Map = [[0 0 0 0 0 0 0 0 0 0]
       	  [0 0 0 0 0 0 0 0 0 0]
       	  [0 0 0 1 1 0 0 0 0 0]
@@ -62,12 +69,13 @@ in
       	  [0 0 1 1 0 0 1 0 0 0]
       	  [0 0 0 0 0 0 0 0 0 0]
       	  [0 0 0 0 0 0 0 0 0 0]]
+*/
 
 %%%% Players description %%%%
 
-   NbPlayer = 2
-   Players = [player1 player2]
-   Colors = [yellow green]
+   NbPlayer = 3
+   Players = [player1 player2 player3]
+   Colors = [yellow green red]
 
 %%%% Thinking parameters (only in simultaneous) %%%%
 
