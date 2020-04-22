@@ -271,6 +271,20 @@ in
         end
 
         {System.show '======= Main finished ======='}
+        for P in PlayerList do % the players choose their position & appear on the grid
+            Answer
+        in
+            {Send P isDead(Answer)}
+            if Answer then 
+                ID Pos in
+                {Send P initPosition(ID Pos)}
+                {Browser.browse dead#ID}
+            else 
+                ID Pos in
+                {Send P initPosition(ID Pos)}
+                {Browser.browse winner#ID}
+            end
+        end
     end
 
     {Main}

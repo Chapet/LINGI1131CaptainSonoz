@@ -3,7 +3,6 @@ import
     Input
     System
     OS
-    Browser
 export
     portPlayer:StartPlayer
 define
@@ -33,6 +32,7 @@ define
     NbStartPoints
     GetSlot
     Append
+    IsFreeSlot
 
     % PlayerState : player(i:id p:position m:map s:surface/diving)
     % EnemiesState : row corresponding to the player with id row
@@ -48,60 +48,82 @@ in
     end
 
     fun {InitOthers I Acc NbStarts}
-        if I>Input.nbPlayers then Acc
+        if I>Input.nbPlayer then Acc
         else 
-            {InitOthers I+1 other(alive:Input.maxDamage path:nil map:Input.map nbStarts:NbStarts)|Acc}
+            {InitOthers I+1 other(alive:Input.maxDamage path:nil map:Input.map nbStarts:NbStarts)|Acc NbStarts}
         end
     end
 
     fun {Move OldPos OldMap OldState}
             fun {ChooseNewPosition ListDir}
-                X Y 
-            in
-                %{System.show ListDir#Map}
-                if ListDir==nil then newPosition(dir:surface pos:OldPos)
-                else
-                    case ListDir.1
-                    of north then
-                        if OldPos.x == 1 then {ChooseNewPosition ListDir.2}
-                        else
-                            Y = OldPos.y
-                            X = OldPos.x-1
-                            if {IsFreeSlot X Y OldMap} then newPosition(dir:north pos:pt(x:X y:Y))
-                            else {ChooseNewPosition ListDir.2} end
-                        end
-                    [] east then
-                        if OldPos.y == Input.nColumn then {ChooseNewPosition ListDir.2}
-                        else
-                            Y = OldPos.y+1
-                            X = OldPos.x
-                            if {IsFreeSlot X Y OldMap}  then newPosition(dir:east pos:pt(x:X y:Y))
-                            else {ChooseNewPosition ListDir.2} end
-                        end
-                    [] south then
-                        if OldPos.x == Input.nRow then {ChooseNewPosition ListDir.2}
-                        else
-                            Y = OldPos.y
-                            X = OldPos.x+1
-                            if {IsFreeSlot X Y OldMap}  then newPosition(dir:south pos:pt(x:X y:Y))
-                            else {ChooseNewPosition ListDir.2} end
-                        end
+                    X Y 
+                in
+                    if ListDir==nil then newPosition(dir:surface pos:OldPos)
                     else
-                        if OldPos.y == 1 then {ChooseNewPosition ListDir.2}
+                        case ListDir.1
+                        of north then
+                            if OldPos.x == 1 then {ChooseNewPosition ListDir.2}
+                            else
+                                Y = OldPos.y
+                                X = OldPos.x-1
+                                if {IsFreeSlot X Y OldMap} then newPosition(dir:north pos:pt(x:X y:Y))
+                                else {ChooseNewPosition ListDir.2} end
+                            end
+                        [] east then
+                            if OldPos.y == Input.nColumn then {ChooseNewPosition ListDir.2}
+                            else
+                                Y = OldPos.y+1
+                                X = OldPos.x
+                                if {IsFreeSlot X Y OldMap}  then newPosition(dir:east pos:pt(x:X y:Y))
+                                else {ChooseNewPosition ListDir.2} end
+                            end
+                        [] south then
+                            if OldPos.x == Input.nRow then {ChooseNewPosition ListDir.2}
+                            else
+                                Y = OldPos.y
+                                X = OldPos.x+1
+                                if {IsFreeSlot X Y OldMap}  then newPosition(dir:south pos:pt(x:X y:Y))
+                                else {ChooseNewPosition ListDir.2} end
+                            end
                         else
-                            Y = OldPos.y-1
-                            X = OldPos.x
-                            if {IsFreeSlot X Y OldMap}  then newPosition(dir:west pos:pt(x:X y:Y))
-                            else {ChooseNewPosition ListDir.2} end
+                            if OldPos.y == 1 then {ChooseNewPosition ListDir.2}
+                            else
+                                Y = OldPos.y-1
+                                X = OldPos.x
+                                if {IsFreeSlot X Y OldMap}  then newPosition(dir:west pos:pt(x:X y:Y))
+                                else {ChooseNewPosition ListDir.2} end
+                            end
                         end
                     end
-                end
+            end
+            fun {RandomDirections Directions Acc}
+                    fun {Length L Acc}
+                        case L
+                        of H|T then {Length T Acc+1}
+                        else Acc end
+                    end
+                    fun {GetAndRemoveNth N Directions Output}
+                        case Directions
+                        of H|T then 
+                            if N==1 then Output=H T
+                            else H|{GetAndRemoveNth N-1 T Output} end
+                        else Output=nil nil end
+                    end
+                in
+                    case Directions
+                    of nil then Acc
+                    else
+                            Rand = ({OS.rand} mod {Length Directions 0}) + 1
+                            NewDir NewDirections
+                        in
+                            NewDirections = {GetAndRemoveNth Rand Directions NewDir}
+                            {RandomDirections NewDirections NewDir|Acc}
+                    end
             end
             NewPos
         in
-            {System.show 'choosing new position'}
-            NewPos = {ChooseNewPosition [north east south west]}
-            {System.show 'new position chosen'#NewPos}
+            %NewPos = {ChooseNewPosition [north east south west]}
+            NewPos = {ChooseNewPosition {RandomDirections [north east south west] nil}}
             move(pos:NewPos.pos dir:NewPos.dir map:{UpdateMap OldMap OldPos.x OldPos.y})
     end
 
@@ -112,7 +134,6 @@ in
             dive(m:Input.map s:diving)
         else dive(m:Map s:diving) end
     end
-
 
     fun {ChargeItem ChargingItems Charged}
         case ChargingItems
@@ -136,7 +157,7 @@ in
         end
     end
 
-    fun {FireItem ChargingItems PlayerPos Fired}
+    fun {FireItem ChargingItems PlayerPos Fired Others}
             fun {Fire Kind}
                     fun {LaunchMine}
                             ManhattanRange = (Input.maxDistanceMine-Input.minDistanceMine+1)
@@ -154,21 +175,82 @@ in
 
                             Tmp = {IsFreeSlot Pt.x Pt.y Input.map}
                             if Tmp==indexOutOfBound then {LaunchMine}
-                            elseif Tmp then mine(Pt)
+                            elseif Tmp then {System.show mine#Pt} mine(Pt)
                             else {LaunchMine} end
                     end
                     fun {LaunchMissile}
-                            X = ({OS.rand} mod Input.maxDistanceMissile) + Input.minDistanceMissile
-                            Y = ({OS.rand} mod (Input.maxDistanceMissile - X)) + Input.minDistanceMissile
-                            SgnX = (({OS.rand} mod 2) * 2) - 1
-                            SgnY = (({OS.rand} mod 2) * 2) - 1
-                            Pt = pt(x:PlayerPos.x + SgnX*X y:PlayerPos.y + SgnY*Y)
+                            fun {SelectPlayer MaxPossiblePos Others}
+                                case Others
+                                of H|T then
+                                    if H.nbStarts =< MaxPossiblePos then H
+                                    else {SelectPlayer MaxPossiblePos T} end
+                                else null end
+                            end
+                            fun {SelectPosition Other}
+                                    fun {IsPossibleSlot X Y M}
+                                            fun {Get N M}
+                                                case M
+                                                of H|T then
+                                                    if N==1 then H
+                                                    else {Get N-1 T} end
+                                                else indexOutOfBound end
+                                            end
+                                            Row 
+                                            Slot
+                                        in
+                                            Row = {Get X M}
+                                            Slot = {Get Y Row}
+                                            if Slot==0 then true
+                                            else true end
+                                    end
+                                    fun {SelectOnMap X Y Map}
+                                        if Y>Input.nColumn then
+                                            if X==Input.nRow then null
+                                            else {SelectOnMap X+1 1 Map} end
+                                        else
+                                            if {IsPossibleSlot X Y Map} andthen 
+                                               {ManhattanDistance PlayerPos pt(x:X y:Y)} >= Input.minDistanceMissile andthen
+                                               {ManhattanDistance PlayerPos pt(x:X y:Y)} =< Input.maxDistanceMissile then pt(x:X y:Y) 
+                                            else {SelectOnMap X Y+1 Map} end
+                                        end
+                                    end
+                                in
+                                    case Other
+                                    of other(alive:_ path:_ map:M nbStarts:_) then 
+                                        {SelectOnMap 1 1 M}
+                                    end
+                            end
+                            fun {Loop I N}
+                                if I>N then null
+                                else
+                                    Other = {SelectPlayer I Others} in
+                                    if Other \= null then 
+                                        Pos = {SelectPosition Other} in
+                                        if Pos \= null then missile(Pos)
+                                        else {Loop I+1 N} end
+                                    else {Loop I+1 N} end 
+                                end
+                            end
+                            fun {Random}
+                                    X = ({OS.rand} mod Input.maxDistanceMissile) + Input.minDistanceMissile
+                                    Y = ({OS.rand} mod (Input.maxDistanceMissile - X)) + Input.minDistanceMissile
+                                    SgnX = (({OS.rand} mod 2) * 2) - 1
+                                    SgnY = (({OS.rand} mod 2) * 2) - 1
+                                    Pt = pt(x:PlayerPos.x + SgnX*X y:PlayerPos.y + SgnY*Y)
+                                    Tmp 
+                                in
+                                    Tmp = {IsFreeSlot Pt.x Pt.y Input.map}
+                                    if Tmp==indexOutOfBound then {Random}
+                                    elseif Tmp then {System.show missile#Pt} missile(Pt)
+                                    else {Random} end
+                            end                            
+                            Other 
+                            N = (Input.nRow * Input.nColumn)
                             Tmp
                         in
-                            Tmp = {IsFreeSlot Pt.x Pt.y Input.map}
-                            if Tmp==indexOutOfBound then {LaunchMissile}
-                            elseif Tmp then missile(Pt)
-                            else {LaunchMissile} end
+                            Tmp = {Loop 1 N}
+                            if Tmp==nul then {Random}
+                            else Tmp end
                     end
                     fun {LaunchDrone}
                             B = {OS.rand} mod 2
@@ -184,7 +266,6 @@ in
                             end
                     end
                 in
-                    {System.show firing#Kind}
                     case Kind
                     of mine then {LaunchMine}
                     [] missile then {LaunchMissile}
@@ -194,12 +275,11 @@ in
         in
             case ChargingItems
             of H|T then
-                {System.show fireItem#H}
                 case H
                 of I#N then
                     if N==Input.I then Fired={Fire I} (I#0)|T
-                    else H|{FireItem T PlayerPos Fired} end
-                else H|{FireItem T PlayerPos Fired} end
+                    else H|{FireItem T PlayerPos Fired Others} end
+                else H|{FireItem T PlayerPos Fired Others} end
             else 
                 Fired=null 
                 nil
@@ -409,7 +489,8 @@ in
             fun {Get N M}
                 case M
                 of H|T then
-                    if N==1 then H
+                    if N<1 then indexOutOfBound                  
+                    elseif N==1 then H
                     else {Get N-1 T} end
                 else indexOutOfBound end
             end
@@ -417,14 +498,14 @@ in
             Slot
         in
             Row = {Get X M}
-            if Row==indexOutOfBound then {System.show indexOutOfBound} indexOutOfBound
+            if Row==indexOutOfBound then {System.show indexOutOfBound} false
             else 
                 Slot = {Get Y Row}
-                if Slot==indexOutOfBound then {System.show indexOutOfBound} indexOutOfBound
+                if Slot==indexOutOfBound then {System.show indexOutOfBound} false
                 elseif Slot==1 then false
                 else true end
             end
-   end
+    end
 
     fun {Append L1 L2}
         case L1
@@ -436,7 +517,6 @@ in
         case Stream
         of nil then {System.show playerStream#'nil'} skip
         [] H|T then
-            {System.show myPlayer#H}
             case H
             of initPosition(I NewPos) then
                 I = ID
@@ -464,9 +544,7 @@ in
                 {TreatStream T ID Player items(charging:{ChargeItem Items.charging KindItem} placed:Items.placed) Others}
             [] fireItem(I KindFire) then 
                 NewChargingItems in
-                {System.show myPlayer#fireItem(charging:Items.charging pos:Player.pos)}
-                NewChargingItems = {FireItem Items.charging Player.pos KindFire}
-                {System.show myPlayer#fireItem(KindFire NewChargingItems)}
+                NewChargingItems = {FireItem Items.charging Player.pos KindFire Others}
                 I = ID
                 case KindFire 
                 of mine(_) then {TreatStream ID T Player items(charging:NewChargingItems placed:KindFire|Items.placed) Others}
@@ -481,10 +559,10 @@ in
                 {TreatStream T ID Player Items Others}
             [] sayMove(I Dir) then 
                 % To be implemented
-                {TreatStream T ID Player Items Others}
+                {TreatStream T ID Player Items {UpdateDirections I Dir Others}}
             [] saySurface(I) then 
                 % To be implemented
-                {TreatStream T ID Player Items Others}
+                {TreatStream T ID Player Items {UpdateDirections I surface Others}}
             [] sayCharge(I KindItem) then
                 % To be implemented
                 {TreatStream T ID Player Items Others}
@@ -493,12 +571,14 @@ in
                 {TreatStream T ID Player Items Others}
             [] sayMissileExplode(I Pos Msg) then
                 Msg = {MissileExploded Pos ID Player}
+                if I==ID andthen {ManhattanDistance Player.pos Pos} < 2 then {System.show '====== RIP : self damage ======'} end
                 case Msg
                 of sayDamageTaken(_ _ L) then {TreatStream T ID player(pos:Player.pos map:Player.map state:Player.state health:L) Items Others}
                 [] null then {TreatStream T ID Player Items Others}
                 else {TreatStream T ID player(pos:Player.pos map:Player.map state:Player.state health:0) Items Others} end
             [] sayMineExplode(I Pos Msg) then 
                 Msg = {MineExploded Pos ID Player I}
+                if I==ID andthen {ManhattanDistance Player.pos Pos} < 2 then {System.show '====== RIP : self damage ======'} end
                 case Msg
                 of sayDamageTaken(_ _ L) then {TreatStream T ID player(pos:Player.pos map:Player.map state:Player.state health:L) Items Others}
                 [] null then {TreatStream T ID Player Items Others}
@@ -523,8 +603,8 @@ in
             [] sayDamageTaken(I Damage LifeLeft) then
                 % To be implemented
                 {TreatStream T ID Player Items Others}
-            else {System.show error(where:'player -> TreatStream')} {TreatStream T ID Player Items} end
-        else {TreatStream Stream ID Player Items} end
+            else {System.show error(where:'player -> TreatStream' who:ID what:H)} {TreatStream T ID Player Items Others} end
+        else {TreatStream Stream ID Player Items Others} end
     end
 
     fun{StartPlayer Color ID}
@@ -534,7 +614,7 @@ in
             {NewPort Stream Port}
             thread
                 {TreatStream Stream 
-                            id(id:ID color:Color name:'Name')
+                            id(id:ID color:Color name:'Overkill')
                             player(pos:_ map:Input.map state:diving health:Input.maxDamage) 
                             items(charging:[mine#0 missile#0 drone#0 sonar#0] placed:nil) 
                             {InitOthers 1 nil {NbStartPoints 1 1 0}}
@@ -543,3 +623,9 @@ in
             Port
     end
 end
+
+
+% TODO
+% - Quadrillé map avec mines : à faire exploser quand un jouer est proche
+% - Ne pas lancé missile si pas sûr
+% - Améliorer mouvement aléatoire
