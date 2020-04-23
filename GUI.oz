@@ -27,6 +27,7 @@ define
 	DrawPath
 	DrawExplosion
 	DisplayDrone
+	DisplaySonar
 
 	BuildWindow
 
@@ -41,9 +42,9 @@ in
 
 %%%%% Build the initial window and set it up (call only once)
 	fun{BuildWindow}
-		Grid GridScore Toolbar Desc DescScore Window
+		Grid GridScore SonarText Toolbar Desc DescScore Window
 	in
-		Toolbar=lr(glue:we tbbutton(text:"Quit" glue:w action:toplevel#close))
+		Toolbar=lr(glue:we tbbutton(text:"Quit" glue:w action:toplevel#close) label(handle:SonarText text:' ' glue:n))
 		Desc=grid(handle:Grid height:500 width:500)
 		DescScore=grid(handle:GridScore height:100 width:500)
 		Window={QTk.build td(Toolbar Desc DescScore)}
@@ -69,7 +70,7 @@ in
 
 		{DrawMap Grid}
 
-		handle(grid:Grid score:GridScore)
+		handle(grid:Grid score:GridScore sonar:SonarText)
 	end
 
 %%%%% Squares of water and island
@@ -229,7 +230,7 @@ in
 				end
 			end
 			proc {RemoveExplosion Explosion}
-				thread {Delay 600} {RemoveItem Grid Explosion.handle} end
+				thread {Delay Input.guiDelay} {RemoveItem Grid Explosion.handle} end
 			end
 			Explosion1 Explosion2 Explosion3 Explosion4 Explosion5 
 			Explosions = [Explosion1 Explosion2 Explosion3 Explosion4 Explosion5]
@@ -237,6 +238,7 @@ in
 		in
 			Explosions = {GenerateExplosions N}
 			{ShowExplosions Explosions N}
+			{Delay Input.guiDelay}
 	end
 
 	proc {DisplayDrone Grid Drone}
@@ -244,16 +246,26 @@ in
 			if Current > Max then skip
 			else
 				Handle in
-				if IsRow then {Grid.grid configure(label(handle:Handle borderwidth:5 relief:raised bg:c(0 0 0) ipadx:10 ipady:10) row:Position column:Current)} 
-				else {Grid.grid configure(label(handle:Handle borderwidth:5 relief:raised bg:c(0 0 0) ipadx:10 ipady:10) row:Current column:Position)} end
-				thread {Delay 800} {RemoveItem Grid Handle} end
+				if IsRow then {Grid.grid configure(label(text:'D' handle:Handle borderwidth:2 relief:raised bg:c(255 255 255) ipadx:4 ipady:4) row:Position+1 column:Current+1)} 
+				else {Grid.grid configure(label(text:'D' handle:Handle borderwidth:2 relief:raised bg:c(255 255 255) ipadx:4 ipady:4) row:Current+1 column:Position+1)} end
+				thread {Delay Input.guiDelay} {RemoveItem Grid Handle} end
+				{Sweep IsRow Position Current+1 Max}
 			end
 		end
 		in
 		case Drone
-		of drone(row R) then {Sweep true R 1 Input.nColumn}
-		[] drone(column C) then {Sweep false C 1 Input.nRow}
+		of drone(row R) then {Sweep true R 1 Input.nColumn} {Delay Input.guiDelay}
+		[] drone(column C) then {Sweep false C 1 Input.nRow} {Delay Input.guiDelay}
 		else skip end
+	end
+
+	proc {DisplaySonar Grid ID}
+		case ID
+		of id(id:_ name:N color:C) then
+			Handle in
+			{Grid.sonar set('Sonar by '#N#' ('#C#')')}
+			thread {Delay Input.guiDelay} {Grid.sonar set(' ')} end
+		end
 	end
 
 	proc{RemoveItem Grid Handle}
@@ -349,13 +361,13 @@ in
 		[] removePlayer(ID)|T then
 			{TreatStream T Grid {RemovePlayer Grid ID State}}
 		[] explosion(ID Position)|T then
-			%{System.show 'BOOOOM ... explosion by'#ID#Position}
 			{DrawExplosion Grid Position}
 			{TreatStream T Grid State}
 		[] drone(ID Drone)|T then
 			{DisplayDrone Grid Drone}
 			{TreatStream T Grid State}
 		[] sonar(ID)|T then
+			{DisplaySonar Grid ID}
 			{TreatStream T Grid State}
 		[] _|T then
 			{TreatStream T Grid State}

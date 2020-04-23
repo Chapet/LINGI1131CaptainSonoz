@@ -193,32 +193,32 @@ in
                         [] missile(1:P) then
                             {Send GUIPort explosion(I P)} %not mandatory
                             NewPlayerDeadList = {ExplosionHandling missile PlayerDeadList 1 I P}
-                        [] drone(row:P) then
+                        [] drone(row P) then
                             for J in 1..Input.nbPlayer do
                                 IdPlayer Ans % Id, Answer
                                 in
-                                %{Send GUIPort drone(CurrentId drone(row:P))} % not mandatory
-                                {Send {Nth PlayerList J} sayPassingDrone(drone(row:P) IdPlayer Ans)}
-                                {Send {Nth PlayerList CurrentId} sayAnswerDrone(drone(row:P) IdPlayer Ans)}
+                                {Send {Nth PlayerList J} sayPassingDrone(drone(row P) IdPlayer Ans)}
+                                {Send {Nth PlayerList CurrentId} sayAnswerDrone(drone(row P) IdPlayer Ans)}
                             end
+                            {Send GUIPort drone(I drone(row P))} % not mandatory
                             NewPlayerDeadList = PlayerDeadList
-                        [] drone(column:P) then
+                        [] drone(column P) then
                             for J in 1..Input.nbPlayer do
                                 IdPlayer Ans % Id, Answer
                                 in
-                                %{Send GUIPort drone(CurrentId drone(column:P))} % not mandatory
-                                {Send {Nth PlayerList J} sayPassingDrone(drone(column:P) IdPlayer Ans)}
-                                {Send {Nth PlayerList CurrentId} sayAnswerDrone(drone(column:P) IdPlayer Ans)}
+                                {Send {Nth PlayerList J} sayPassingDrone(drone(column P) IdPlayer Ans)}
+                                {Send {Nth PlayerList CurrentId} sayAnswerDrone(drone(column P) IdPlayer Ans)}
                             end
+                            {Send GUIPort drone(I drone(column P))} % not mandatory
                             NewPlayerDeadList = PlayerDeadList
                         [] sonar then
                             for J in 1..Input.nbPlayer do
                                 IdPlayer Ans % Id, Answer
                                 in
-                                %{Send GUIPort sonar(CurrentId)} % not mandatory
                                 {Send {Nth PlayerList J} sayPassingSonar(IdPlayer Ans)}
                                 {Send {Nth PlayerList CurrentId} sayAnswerSonar(IdPlayer Ans)}
                             end
+                            {Send GUIPort sonar(I)} % not mandatory
                             NewPlayerDeadList = PlayerDeadList
                         else % K== null no item was fired
                             NewPlayerDeadList = PlayerDeadList
