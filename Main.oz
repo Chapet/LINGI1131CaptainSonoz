@@ -88,15 +88,15 @@ in
     end
 
     fun {LastSurvivor L}
-        fun {Sum L A}
-            case L
-            of H|T then {Sum T A+H}
-            else A end
-        end
-        N
-    in
-        N = {Sum L 0}
-        (N + Input.nbPlayer) =< 1
+            fun {Sum L A}
+                case L
+                of H|T then {Sum T A+H}
+                else A end
+            end
+            N
+        in
+            N = {Sum L 0}
+            (N + Input.nbPlayer) =< 1
     end
 
     proc {BroadcastMessage M PlayerDeadList} % broadcast a message to all players
@@ -125,19 +125,19 @@ in
     end
 
     fun {ExplosionHandling Kind PlayerDeadList I AttackerID Position}
-        Mes
-    in
-        if I>Input.nbPlayer then PlayerDeadList
-        else
-            case Kind
-            of mine then
-                {Send {Nth PlayerList I} sayMineExplode(AttackerID Position Mes)}
-                {ExplosionHandling Kind {MessageHandling Mes PlayerDeadList} I+1 AttackerID Position}
-            else  % missile
-                {Send {Nth PlayerList I} sayMissileExplode(AttackerID Position Mes)}
-                {ExplosionHandling Kind {MessageHandling Mes PlayerDeadList} I+1 AttackerID Position}
+            Mes
+        in
+            if I>Input.nbPlayer then PlayerDeadList
+            else
+                case Kind
+                of mine then
+                    {Send {Nth PlayerList I} sayMineExplode(AttackerID Position Mes)}
+                    {ExplosionHandling Kind {MessageHandling Mes PlayerDeadList} I+1 AttackerID Position}
+                else  % missile
+                    {Send {Nth PlayerList I} sayMissileExplode(AttackerID Position Mes)}
+                    {ExplosionHandling Kind {MessageHandling Mes PlayerDeadList} I+1 AttackerID Position}
+                end
             end
-        end
     end
 
     proc {WaitForOk}
