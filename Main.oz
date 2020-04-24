@@ -5,11 +5,10 @@ import
     PlayerManager
     System
     Browser
-    Application
+    OS
 define
     GUIPort = {GUI.portWindow} % Starting the GUI port window
     SimulPort
-    OkWait
     PlayerList
     Nth
     PlayerListGen
@@ -21,7 +20,6 @@ define
     LastSurvivor
     BroadcastMessage
     MessageHandling
-    WaitForOk
     GameTurnByTurn
     SimulGaming
     GameSimultaneous
@@ -83,20 +81,22 @@ in
 
     end
 
-    proc {SimulateThinking Time}
-        {Delay Time}
+    proc {SimulateThinking}
+        Wait = ({OS.rand} mod (Input.thinkMin - Input.thinkMax)) + Input.thinkMin
+        in
+        {Delay Wait}
     end
 
     fun {LastSurvivor L}
-        fun {Sum L A}
-            case L
-            of H|T then {Sum T A+H}
-            else A end
-        end
-        N
-    in
-        N = {Sum L 0}
-        (N + Input.nbPlayer) =< 1
+            fun {Sum L A}
+                case L
+                of H|T then {Sum T A+H}
+                else A end
+            end
+            N
+        in
+            N = {Sum L 0}
+            (N + Input.nbPlayer) =< 1
     end
 
     proc {BroadcastMessage M PlayerDeadList} % broadcast a message to all players
@@ -125,30 +125,19 @@ in
     end
 
     fun {ExplosionHandling Kind PlayerDeadList I AttackerID Position}
-        Mes
-    in
-        if I>Input.nbPlayer then PlayerDeadList
-        else
-            case Kind
-            of mine then
-                {Send {Nth PlayerList I} sayMineExplode(AttackerID Position Mes)}
-                {ExplosionHandling Kind {MessageHandling Mes PlayerDeadList} I+1 AttackerID Position}
-            else  % missile
-                {Send {Nth PlayerList I} sayMissileExplode(AttackerID Position Mes)}
-                {ExplosionHandling Kind {MessageHandling Mes PlayerDeadList} I+1 AttackerID Position}
+            Mes
+        in
+            if I>Input.nbPlayer then PlayerDeadList
+            else
+                case Kind
+                of mine then
+                    {Send {Nth PlayerList I} sayMineExplode(AttackerID Position Mes)}
+                    {ExplosionHandling Kind {MessageHandling Mes PlayerDeadList} I+1 AttackerID Position}
+                else  % missile
+                    {Send {Nth PlayerList I} sayMissileExplode(AttackerID Position Mes)}
+                    {ExplosionHandling Kind {MessageHandling Mes PlayerDeadList} I+1 AttackerID Position}
+                end
             end
-        end
-    end
-
-    proc {WaitForOk}
-        {System.show 'waiting...'}
-        case OkWait
-        of true then
-            {System.show waitingLoopOver}
-        else
-            {Delay Input.guiDelay}
-            {WaitForOk}
-        end
     end
 
     proc {GameTurnByTurn Step CurrentId Surface PlayerDeadList} % similar to a stream in the way it works
@@ -268,7 +257,7 @@ in
         PlayerDeadList
         AmIDead
         in
-        {SimulateThinking Input.thinkMin}
+        {SimulateThinking}
         {Send {Nth PlayerList CurrentId} isDead(AmIDead)}
         {Send SimulPort AmIDead#CurrentId}
         {Send SimulPort pdl#PlayerDeadList}
@@ -287,7 +276,7 @@ in
                         {Send {Nth PlayerList CurrentId} dive}
                         {SimulGaming step3 CurrentId ~1}
                     elseif Surface > 0 then % the submarine is at the surface and still has to wait
-                        {SimulateThinking Surface*1000} %waiting at the surface
+                        {Delay Surface*1000} %waiting at the surface
                         {SimulGaming step1 CurrentId 0}
                     else {SimulGaming step3 CurrentId Surface} %the submarine is underwater (Surface == -1) and can carry on with his turn
                     end
@@ -404,7 +393,6 @@ in
                 {GameSimultaneous T PlayerDeadList}
             else % nil
                 {System.show gameSimulOver}
-                OkWait = true
             end
         else
             {GameSimultaneous Stream PlayerDeadList}
@@ -442,11 +430,9 @@ in
             end
 
             {System.show launchingMainThread}
-            thread
-                {GameSimultaneous SimulStream {SurfaceListGen 1 nil}}
-            end
+            {GameSimultaneous SimulStream {SurfaceListGen 1 nil}}
 
-            {WaitForOk}
+            {System.show parallelFinished}
         end
 
         {System.show '======= Main finished ======='}
