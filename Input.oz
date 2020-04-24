@@ -78,8 +78,8 @@ in
 
 %%%% Thinking parameters (only in simultaneous) %%%%
 
-   ThinkMin = 500
-   ThinkMax = 3000
+   ThinkMin = 100
+   ThinkMax = 300
 
 %%%% Surface time/turns %%%%
 
@@ -87,24 +87,24 @@ in
 
 %%%% Life %%%%
 
-   MaxDamage = 4
+   MaxDamage = 2
 
 %%%% Number of load for each item %%%%
 
-   Missile = 3
-   Mine = 3
+   Missile = 2
+   Mine = 2
    Sonar = 3
    Drone = 3
 
 %%%% Distances of placement %%%%
 
    MinDistanceMine = 1
-   MaxDistanceMine = 2
+   MaxDistanceMine = 3
    MinDistanceMissile = 1
-   MaxDistanceMissile = 4
+   MaxDistanceMissile = 5
 
 %%%% Waiting time for the GUI between each effect %%%%
 
-   GUIDelay = 500 % ms
+   GUIDelay = 300 % ms
 
 end
