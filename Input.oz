@@ -73,7 +73,7 @@ in
 %%%% Players description %%%%
 
    NbPlayer = 3
-   Players = [player1 player1 player1]
+   Players = [player1 player2 player3]
    Colors = [yellow green red]
 
 %%%% Thinking parameters (only in simultaneous) %%%%
@@ -87,7 +87,7 @@ in
 
 %%%% Life %%%%
 
-   MaxDamage = 1
+   MaxDamage = 4
 
 %%%% Number of load for each item %%%%
 

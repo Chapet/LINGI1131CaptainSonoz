@@ -4,11 +4,10 @@ import
     System
     OS
     Browser
-    Number
 export
     portPlayer:StartPlayer
 define
-    InitPlayer
+    %InitPlayer
     InitPosition
     Move
     Dive
@@ -27,6 +26,8 @@ define
     RandPosition 
     Get
     UpdateMap
+    Abs
+    ManhattanDistance
 
     % PlayerState : player(i:id p:position m:map s:surface/diving)
     % EnemiesState : row corresponding to the player with id row
@@ -113,15 +114,15 @@ in
         case ChargingItems
         of H|T then
             case H
-            of I#N then
-                if N==Input.I then H|{ChargeItem T Charged}
+            of Type#Charges then
+                if Charges==Input.Type then H|{ChargeItem T Charged}
                 else
-                    if N+1 == Input.I then 
-                        Charged=I 
-                        (I#N+1)|T
+                    if Charges+1 == Input.Type then 
+                        Charged=Type
+                        (Type#Charges+1)|T
                     else 
                         Charged=null 
-                        (I#N+1)|T
+                        (Type#Charges+1)|T
                     end
                 end
             else H|{ChargeItem T Charged} end
@@ -133,38 +134,65 @@ in
 
     fun {FireItem ChargingItems PlayerPos Fired}
         fun {Fire Kind}
-            fun {PlaceMine}
-                X = ({OS.rand} mod Input.maxDistanceMine) + Input.minDistanceMine
-                Y = ({OS.rand} mod (Input.maxDistanceMine - X)) + Input.minDistanceMine
-                SgnX = (({OS.rand} mod 2) * 2) - 1
-                SgnY = (({OS.rand} mod 2) * 2) - 1
+            fun {CheckPosition Pos}
+                Row = {Get Pos.x Input.map}
+                Slot = {Get Pos.y Row}
             in
-                mine(pt(x:PlayerPos.x + SgnX*X y:PlayerPos.y + SgnY*Y))
+                if Slot==1 then false
+                else true end
+            end
+            fun {LaunchMine}
+                ManhattanRange = (Input.maxDistanceMine-Input.minDistanceMine+1)
+                X Y SgnX SgnY Pt
+            in
+                X = ({OS.rand} mod ManhattanRange) + Input.minDistanceMine
+                SgnX = (({OS.rand} mod 2) * 2) - 1
+                if X < ManhattanRange then
+                    Y = ({OS.rand} mod (ManhattanRange - X)) + Input.minDistanceMine
+                    SgnY = (({OS.rand} mod 2) * 2) - 1
+                else
+                    Y = 0
+                    SgnY = 0
+                end
+
+                Pt = pt(x:PlayerPos.x + SgnX*X y:PlayerPos.y + SgnY*Y)
+                if {CheckPosition Pt} then mine(Pt)
+                else {LaunchMine} end
             end
             fun {LaunchMissile}
-                X = ({OS.rand} mod Input.maxDistanceMissile) + Input.minDistanceMissile
-                Y = ({OS.rand} mod (Input.maxDistanceMissile - X)) + Input.minDistanceMissile
-                SgnX = (({OS.rand} mod 2) * 2) - 1
-                SgnY = (({OS.rand} mod 2) * 2) - 1
-            in
-                missile(pt(x:PlayerPos.x + SgnX*X y:PlayerPos.y + SgnY*Y))
+                    X Y SgnX SgnY Pt
+                    ManhattanRange = (Input.maxDistanceMine-Input.minDistanceMine+1)
+                in
+                    X = ({OS.rand} mod Input.maxDistanceMissile) + Input.minDistanceMissile
+                    SgnX = (({OS.rand} mod 2) * 2) - 1
+                    if X<ManhattanRange then
+                        Y = ({OS.rand} mod (Input.maxDistanceMissile - X)) + Input.minDistanceMissile
+                        SgnY = (({OS.rand} mod 2) * 2) - 1
+                    else 
+                        Y = 0
+                        SgnY = 0
+                    end
+                    
+                    Pt = pt(x:PlayerPos.x + SgnX*X y:PlayerPos.y + SgnY*Y)
+                    if {CheckPosition Pt} then missile(Pt)
+                    else {LaunchMissile} end
             end
             fun {LaunchDrone}
-                B = {OS.rand} mod 2
-            in
-                if B < 1 then
-                    Row = ({OS.rand} mod Input.nRow) + 1
+                    B = {OS.rand} mod 2
                 in
-                    drone(row Row)
-                else 
-                    Column = ({OS.rand} mod Input.nColumn) + 1
-                in
-                    drone(column Column)
-                end
+                    if B < 1 then
+                            Row = ({OS.rand} mod Input.nRow) + 1
+                        in
+                            drone(row Row)
+                    else 
+                            Column = ({OS.rand} mod Input.nColumn) + 1
+                        in
+                            drone(column Column)
+                    end
             end
         in
             case Kind
-            of mine then {PlaceMine}
+            of mine then {LaunchMine}
             [] missile then {LaunchMissile}
             [] drone then {LaunchDrone}
             else sonar end
@@ -173,8 +201,8 @@ in
         case ChargingItems
         of H|T then
             case H
-            of I#N then
-                if N==Input.I then Fired={Fire I} (I#0)|T
+            of Type#Charges then
+                if Charges==Input.Type then Fired={Fire Type} (Type#0)|T
                 else H|{FireItem T PlayerPos Fired} end
             else H|{FireItem T PlayerPos Fired} end
         else 
@@ -195,7 +223,7 @@ in
 
     fun {MissileExploded MissilePos ID Player}
         fun {TakeDamage PlayerPos}
-            Dist = {Number.abs (PlayerPos.x-MissilePos.x)} + {Number.abs (PlayerPos.y-MissilePos.y)}
+            Dist = {ManhattanDistance PlayerPos MissilePos}
         in
             if Dist >= 2 then 0
             elseif Dist >= 1 then 1 
@@ -207,11 +235,12 @@ in
             Damage = {TakeDamage P}
         in
             if Damage >= H then sayDeath(ID)
-            else sayDamageTaken(ID Damage H-Damage) end
+            elseif Damage > 0 then sayDamageTaken(ID Damage H-Damage)
+            else null end
         end
     end
 
-    fun {MineExploded MinePos ID Player}
+    fun {MineExploded MinePos ID Player AttackerID}
         {MissileExploded MinePos ID Player}
     end
 
@@ -275,6 +304,15 @@ in
         else {RandPosition} end
     end
 
+    fun {Abs X}
+        if X>0 then X
+        else ~1*X end
+    end
+
+    fun {ManhattanDistance P1 P2}
+        {Abs (P1.x-P2.x)} + {Abs (P1.y-P2.y)}
+    end
+
     proc{TreatStream ID Stream Player Items} % as as many parameters as you want
         case Stream
         of nil then {System.show playerStream#'nil'} skip
@@ -335,11 +373,13 @@ in
                 Msg = {MissileExploded Pos ID Player}
                 case Msg
                 of sayDamageTaken(_ _ L) then {TreatStream T ID player(pos:Player.pos map:Player.map state:Player.state health:L) Items}
+                [] null then {TreatStream T ID Player Items}
                 else {TreatStream T ID player(pos:Player.pos map:Player.map state:Player.state health:0) Items} end
             [] sayMineExplode(I Pos Msg) then 
-                Msg = {MineExploded Pos ID Player}
+                Msg = {MineExploded Pos ID Player I}
                 case Msg
                 of sayDamageTaken(_ _ L) then {TreatStream T ID player(pos:Player.pos map:Player.map state:Player.state health:L) Items}
+                [] null then {TreatStream T ID Player Items}
                 else {TreatStream ID T player(pos:Player.pos map:Player.map state:Player.state health:0) Items} end
             [] sayPassingDrone(Drone I Answer) then 
                 I = ID
@@ -352,16 +392,16 @@ in
                 I = ID
                 Answer = {PassingSonar Player}
                 {TreatStream T ID Player Items}
-            [] sayAnswerSonar(ID Answer) then
+            [] sayAnswerSonar(I Answer) then
                 % To be implemented
                 {TreatStream T ID Player Items}
-            [] sayDeath(ID) then
+            [] sayDeath(I) then
                 % To be implemented
                 {TreatStream T ID Player Items}
-            [] sayDamageTaken(ID Damage LifeLeft) then
+            [] sayDamageTaken(I Damage LifeLeft) then
                 % To be implemented
                 {TreatStream T ID Player Items}
-            else {System.show error(where:'player -> TreatStream')} {TreatStream T ID Player Items} end
+            else {System.show error(where:'player -> TreatStream' who:ID what:H)} {TreatStream T ID Player Items} end
         else {TreatStream Stream ID Player Items} end
     end
 
@@ -372,9 +412,10 @@ in
         {NewPort Stream Port}
         thread
             {TreatStream Stream 
-                        id(id:ID color:Color name:'Name')
+                        id(id:ID color:Color name:'Dumbest')
                         player(pos:_ map:Input.map state:diving health:Input.maxDamage) 
-                        items(charging:[mine#0 missile#0 drone#0 sonar#0] placed:nil)}
+                        items(charging:[missile#0 mine#0 sonar#0 drone#0] placed:nil) 
+                        }
         end
         Port
     end

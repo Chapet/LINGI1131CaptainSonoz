@@ -167,7 +167,6 @@ in
                 [] H then
                     case H
                     of step1 then % checks if the submarine is at the surface
-                        {System.show step1#CurrentId}
                         if {Nth Surface CurrentId} == 0 then % it is the firt turn / the submarine has finished waiting and is granted the permission to dive
                             {Send {Nth PlayerList CurrentId} dive}
                             {GameTurnByTurn endTurn CurrentId {SurfaceListModif Surface CurrentId 1 1} PlayerDeadList} % the CurrentId element of surface is -1
@@ -178,11 +177,9 @@ in
                     [] step3 then %asks the submarine to choose his directions
                         I P D % id, new position and direction
                         in
-                        {System.show step3#CurrentId}
                         {Send {Nth PlayerList CurrentId} move(I P D)}
                         case D
                         of surface then
-                            {System.show surface#I}
                             {Send GUIPort surface(I)}
                             {BroadcastMessage saySurface(I) PlayerDeadList}
                             {GameTurnByTurn endTurn CurrentId {SurfaceListModif Surface CurrentId 2 1} PlayerDeadList} % the turn is over and counts as the first turn spend at the surface
@@ -194,7 +191,6 @@ in
                     [] step6 then % the submarine is authorised to charge an item
                         I K % id, kindItem
                         in
-                        {System.show step6#CurrentId}
                         %{System.show heyStep6Here#CurrentId}
                         {Send  {Nth PlayerList CurrentId} chargeItem(I K)}
                         case K
@@ -206,9 +202,7 @@ in
                     [] step7 then % the submarine is authorised to fire an item
                         I K NewPlayerDeadList % id, kindFire, P in all the below: Position/Row/Column
                         in
-                        {System.show step7#CurrentId}
                         {Send  {Nth PlayerList CurrentId} fireItem(I K)}
-                        {System.show leIrenvoyeEst#I}
                         case K
                         of mine(1:P) then
                             {Send GUIPort putMine(I P)}
@@ -216,9 +210,7 @@ in
                             NewPlayerDeadList = PlayerDeadList
                         [] missile(1:P) then
                             {Send GUIPort explosion(I P)} %not mandatory
-                            {System.show explosionHandling#missile#before}
                             NewPlayerDeadList = {ExplosionHandling missile PlayerDeadList 1 I P}
-                            {System.show explosionHandling#missile#after}
                         [] drone(row P) then
                             for J in 1..Input.nbPlayer do
                                 IdPlayer Ans % Id, Answer
@@ -254,16 +246,12 @@ in
                     []step8 then
                         I M NewPlayerDeadList % Id, Mine
                         in
-                        {System.show step8#CurrentId}
-                        {System.show PlayerDeadList}
                         {Send {Nth PlayerList CurrentId} fireMine(I M)}
                         case M
                         of mine(P) then
                             {Send GUIPort removeMine(I P)}
                             {Send GUIPort explosion(I P)} %not mandatory
-                            {System.show explosionHandling#mine#before}
                             NewPlayerDeadList = {ExplosionHandling mine PlayerDeadList 1 I P}
-                            {System.show explosionHandling#mine#after}
                         else % Mine = null, the player didn't detonated one of his mines
                             NewPlayerDeadList = PlayerDeadList
                         end
@@ -466,11 +454,11 @@ in
             Answer
         in
             {Send P isDead(Answer)}
-            if Answer then
+            if Answer then 
                 ID Pos in
                 {Send P initPosition(ID Pos)}
                 {Browser.browse dead#ID}
-            else
+            else 
                 ID Pos in
                 {Send P initPosition(ID Pos)}
                 {Browser.browse winner#ID}

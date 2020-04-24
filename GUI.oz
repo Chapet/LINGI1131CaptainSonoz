@@ -6,6 +6,7 @@ import
 export
 	portWindow:StartWindow
 define
+	ExplosionImage = {QTk.newImage photo(file:'explosion.ppm')}
 
 	StartWindow
 	TreatStream
@@ -24,6 +25,9 @@ define
 	DrawMine
 	RemoveMine
 	DrawPath
+	DrawExplosion
+	DisplayDrone
+	DisplaySonar
 
 	BuildWindow
 
@@ -38,9 +42,9 @@ in
 
 %%%%% Build the initial window and set it up (call only once)
 	fun{BuildWindow}
-		Grid GridScore Toolbar Desc DescScore Window
+		Grid GridScore SonarText Toolbar Desc DescScore Window
 	in
-		Toolbar=lr(glue:we tbbutton(text:"Quit" glue:w action:toplevel#close))
+		Toolbar=lr(glue:we tbbutton(text:"Quit" glue:w action:toplevel#close) label(handle:SonarText text:' ' glue:n))
 		Desc=grid(handle:Grid height:500 width:500)
 		DescScore=grid(handle:GridScore height:100 width:500)
 		Window={QTk.build td(Toolbar Desc DescScore)}
@@ -66,7 +70,7 @@ in
 
 		{DrawMap Grid}
 
-		handle(grid:Grid score:GridScore)
+		handle(grid:Grid score:GridScore sonar:SonarText)
 	end
 
 %%%%% Squares of water and island
@@ -108,7 +112,7 @@ in
 		pt(x:X y:Y) = Position
 		id(id:Id color:Color name:_) = ID
 
-		LabelSub = label(text:"S" handle:Handle borderwidth:5 relief:raised bg:Color ipadx:5 ipady:5)
+		LabelSub = label(text:'S' handle:Handle borderwidth:5 relief:raised bg:Color ipadx:5 ipady:5)
 		LabelScore = label(text:Input.maxDamage borderwidth:5 handle:HandleScore relief:solid bg:Color ipadx:5 ipady:5)
 		HandlePath = {DrawPath Grid Color X Y}
 		{Grid.grid configure(LabelSub row:X+1 column:Y+1 sticky:wesn)}
@@ -180,6 +184,90 @@ in
 		Handle
 	end
 
+	proc {DrawExplosion Grid Position}
+			X = Position.x Y = Position.y
+			fun {IsFreeSlot X Y}
+					fun {Get N M}
+						case M
+						of H|T then
+							if N==1 then H
+							else {Get N-1 T} end
+						else indexOutOfBound end
+					end
+					Row 
+					Slot
+				in
+					Row = {Get X Input.map}
+					if Row==indexOutOfBound then false
+					else 
+						Slot = {Get Y Row}
+						if Slot==0 then true
+						else false end
+					end
+			end
+			fun {GenerateExplosions N}
+				if N==0 then nil
+				else
+					Handle in
+					label(image:ExplosionImage handle:Handle borderwidth:0 relief:raised bg:white ipadx:5 ipady:5)|{GenerateExplosions N-1}					
+				end
+			end
+			proc {ShowExplosion E X Y}
+				if {IsFreeSlot X-1 Y-1} then {Grid.grid configure(E row:X column:Y)} end
+			end
+			proc {ShowExplosions Explosions N}
+				if N<1 then skip
+				else
+					case Explosions
+					of E|Es then
+						if N==5 then {ShowExplosion E X+1 Y+1} {RemoveExplosion E}
+						elseif N==4 then {ShowExplosion E X Y+1} {RemoveExplosion E}
+						elseif N==3 then {ShowExplosion E X+1 Y} {RemoveExplosion E}
+						elseif N==2 then {ShowExplosion E X+2 Y+1} {RemoveExplosion E}
+						else {ShowExplosion E X+1 Y+2} {RemoveExplosion E} end
+						{ShowExplosions Es N-1}
+					end
+				end
+			end
+			proc {RemoveExplosion Explosion}
+				thread {Delay Input.guiDelay} {RemoveItem Grid Explosion.handle} end
+			end
+			Explosion1 Explosion2 Explosion3 Explosion4 Explosion5 
+			Explosions = [Explosion1 Explosion2 Explosion3 Explosion4 Explosion5]
+			N = 5
+		in
+			Explosions = {GenerateExplosions N}
+			{ShowExplosions Explosions N}
+			{Delay Input.guiDelay}
+	end
+
+	proc {DisplayDrone Grid Drone}
+		proc {Sweep IsRow Position Current Max}
+			if Current > Max then skip
+			else
+				Handle in
+				if IsRow then {Grid.grid configure(label(text:'D' handle:Handle borderwidth:2 relief:raised bg:c(255 255 255) ipadx:4 ipady:4) row:Position+1 column:Current+1)} 
+				else {Grid.grid configure(label(text:'D' handle:Handle borderwidth:2 relief:raised bg:c(255 255 255) ipadx:4 ipady:4) row:Current+1 column:Position+1)} end
+				thread {Delay Input.guiDelay} {RemoveItem Grid Handle} end
+				{Sweep IsRow Position Current+1 Max}
+			end
+		end
+		in
+		case Drone
+		of drone(row R) then {Sweep true R 1 Input.nColumn} {Delay Input.guiDelay}
+		[] drone(column C) then {Sweep false C 1 Input.nRow} {Delay Input.guiDelay}
+		else skip end
+	end
+
+	proc {DisplaySonar Grid ID}
+		case ID
+		of id(id:_ name:N color:C) then
+			Handle in
+			{Grid.sonar set('Sonar by '#N#' ('#C#')')}
+			thread {Delay Input.guiDelay} {Grid.sonar set(' ')} end
+		end
+	end
+
 	proc{RemoveItem Grid Handle}
 		{Grid.grid forget(Handle)}
 	end
@@ -189,7 +277,7 @@ in
 	in
 		guiPlayer(id:ID score:HandleScore submarine:Handle mines:Mine path:Path) = State
 		for H in Path.2 do
-	  {RemoveItem Grid H}
+	  		{RemoveItem Grid H}
 		end
 		guiPlayer(id:ID score:HandleScore submarine:Handle mines:Mine path:Path.1|nil)
 	end
@@ -273,11 +361,13 @@ in
 		[] removePlayer(ID)|T then
 			{TreatStream T Grid {RemovePlayer Grid ID State}}
 		[] explosion(ID Position)|T then
-			{System.show 'BOOOOM ... explosion by'#ID#Position}
+			{DrawExplosion Grid Position}
 			{TreatStream T Grid State}
 		[] drone(ID Drone)|T then
+			{DisplayDrone Grid Drone}
 			{TreatStream T Grid State}
 		[] sonar(ID)|T then
+			{DisplaySonar Grid ID}
 			{TreatStream T Grid State}
 		[] _|T then
 			{TreatStream T Grid State}

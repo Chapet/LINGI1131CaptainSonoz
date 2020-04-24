@@ -1,10 +1,9 @@
 functor
 import
 	PlayerBasicAI
-	Player
+	Player064Overkill
+	Player064Dumbest
 	System
-	%Player1
-	%Player2
 export
 	playerGenerator:PlayerGenerator
 define
@@ -12,8 +11,8 @@ define
 in
 	fun{PlayerGenerator Kind Color ID}
 		case Kind
-		of player1 then {PlayerBasicAI.portPlayer Color ID}
-		[] player2 then {PlayerBasicAI.portPlayer Color ID}
+		of player1 then {Player064Dumbest.portPlayer Color ID}
+		[] player2 then {Player064Overkill.portPlayer Color ID}
 		[] player3 then {PlayerBasicAI.portPlayer Color ID}
 		else playerNotMatching
 		end
