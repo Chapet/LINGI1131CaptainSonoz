@@ -231,25 +231,33 @@ in
                                     else {Loop I+1 N} end 
                                 end
                             end
-                            fun {Random}
-                                    X = ({OS.rand} mod Input.maxDistanceMissile) + Input.minDistanceMissile
-                                    Y = ({OS.rand} mod (Input.maxDistanceMissile - X)) + Input.minDistanceMissile
-                                    SgnX = (({OS.rand} mod 2) * 2) - 1
-                                    SgnY = (({OS.rand} mod 2) * 2) - 1
-                                    Pt = pt(x:PlayerPos.x + SgnX*X y:PlayerPos.y + SgnY*Y)
-                                    Tmp 
+                            fun {RandomMissile}
+                                    X Y SgnX SgnY Pt
+                                    ManhattanRange = (Input.maxDistanceMine-Input.minDistanceMine+1)
                                 in
+                                    X = ({OS.rand} mod Input.maxDistanceMissile) + Input.minDistanceMissile
+                                    SgnX = (({OS.rand} mod 2) * 2) - 1
+                                    if X<ManhattanRange then
+                                        Y = ({OS.rand} mod (Input.maxDistanceMissile - X)) + Input.minDistanceMissile
+                                        SgnY = (({OS.rand} mod 2) * 2) - 1
+                                    else 
+                                        Y = 0
+                                        SgnY = 0
+                                    end
+                                    
+                                    Pt = pt(x:PlayerPos.x + SgnX*X y:PlayerPos.y + SgnY*Y)
                                     Tmp = {IsFreeSlot Pt.x Pt.y Input.map}
-                                    if Tmp==indexOutOfBound then {Random}
-                                    elseif Tmp then {System.show missile#Pt} missile(Pt)
-                                    else {Random} end
-                            end                            
+                                    if Tmp==indexOutOfBound then {RandomMissile}
+                                    elseif Tmp then missile(Pt)
+                                    else {RandomMissile} end
+                            end    
+                                                    
                             Other 
                             N = (Input.nRow * Input.nColumn)
                             Tmp
                         in
                             Tmp = {Loop 1 N}
-                            if Tmp==nul then {Random}
+                            if Tmp==nul then {RandomMissile}
                             else Tmp end
                     end
                     fun {LaunchDrone}

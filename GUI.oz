@@ -264,7 +264,7 @@ in
 		of id(id:_ name:N color:C) then
 			Handle in
 			{Grid.sonar set('Sonar by '#N#' ('#C#')')}
-			thread {Delay 2*Input.guiDelay} {Grid.sonar set(' ')} end
+			thread {Delay Input.guiDelay} {Grid.sonar set(' ')} end
 		end
 	end
 

@@ -114,15 +114,15 @@ in
         case ChargingItems
         of H|T then
             case H
-            of I#N then
-                if N==Input.I then H|{ChargeItem T Charged}
+            of Type#Charges then
+                if Charges==Input.Type then H|{ChargeItem T Charged}
                 else
-                    if N+1 == Input.I then 
-                        Charged=I 
-                        (I#N+1)|T
+                    if Charges+1 == Input.Type then 
+                        Charged=Type
+                        (Type#Charges+1)|T
                     else 
                         Charged=null 
-                        (I#N+1)|T
+                        (Type#Charges+1)|T
                     end
                 end
             else H|{ChargeItem T Charged} end
@@ -148,27 +148,34 @@ in
                 X = ({OS.rand} mod ManhattanRange) + Input.minDistanceMine
                 SgnX = (({OS.rand} mod 2) * 2) - 1
                 if X < ManhattanRange then
-
                     Y = ({OS.rand} mod (ManhattanRange - X)) + Input.minDistanceMine
                     SgnY = (({OS.rand} mod 2) * 2) - 1
-                    Pt = pt(x:PlayerPos.x + SgnX*X y:PlayerPos.y + SgnY*Y)
-                    if {CheckPosition Pt} then mine(Pt)
-                    else {LaunchMine} end
                 else
-                    Pt = pt(x:PlayerPos.x + SgnX*X y:PlayerPos.y)
-                    if {CheckPosition Pt} then mine(Pt)
-                    else {LaunchMine} end
+                    Y = 0
+                    SgnY = 0
                 end
+
+                Pt = pt(x:PlayerPos.x + SgnX*X y:PlayerPos.y + SgnY*Y)
+                if {CheckPosition Pt} then mine(Pt)
+                else {LaunchMine} end
             end
             fun {LaunchMissile}
-                X = ({OS.rand} mod Input.maxDistanceMissile) + Input.minDistanceMissile
-                Y = ({OS.rand} mod (Input.maxDistanceMissile - X)) + Input.minDistanceMissile
-                SgnX = (({OS.rand} mod 2) * 2) - 1
-                SgnY = (({OS.rand} mod 2) * 2) - 1
-                Pt = pt(x:PlayerPos.x + SgnX*X y:PlayerPos.y + SgnY*Y)
-            in
-                if {CheckPosition Pt} then missile(Pt)
-                else {LaunchMissile} end
+                    X Y SgnX SgnY Pt
+                    ManhattanRange = (Input.maxDistanceMine-Input.minDistanceMine+1)
+                in
+                    X = ({OS.rand} mod Input.maxDistanceMissile) + Input.minDistanceMissile
+                    SgnX = (({OS.rand} mod 2) * 2) - 1
+                    if X<ManhattanRange then
+                        Y = ({OS.rand} mod (Input.maxDistanceMissile - X)) + Input.minDistanceMissile
+                        SgnY = (({OS.rand} mod 2) * 2) - 1
+                    else 
+                        Y = 0
+                        SgnY = 0
+                    end
+                    
+                    Pt = pt(x:PlayerPos.x + SgnX*X y:PlayerPos.y + SgnY*Y)
+                    if {CheckPosition Pt} then missile(Pt)
+                    else {LaunchMissile} end
             end
             fun {LaunchDrone}
                     B = {OS.rand} mod 2
@@ -194,8 +201,8 @@ in
         case ChargingItems
         of H|T then
             case H
-            of I#N then
-                if N==Input.I then Fired={Fire I} (I#0)|T
+            of Type#Charges then
+                if Charges==Input.Type then Fired={Fire Type} (Type#0)|T
                 else H|{FireItem T PlayerPos Fired} end
             else H|{FireItem T PlayerPos Fired} end
         else 
@@ -405,7 +412,7 @@ in
         {NewPort Stream Port}
         thread
             {TreatStream Stream 
-                        id(id:ID color:Color name:'Simplest')
+                        id(id:ID color:Color name:'Dumbest')
                         player(pos:_ map:Input.map state:diving health:Input.maxDamage) 
                         items(charging:[missile#0 mine#0 sonar#0 drone#0] placed:nil) 
                         }
