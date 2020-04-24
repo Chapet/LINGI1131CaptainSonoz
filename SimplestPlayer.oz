@@ -407,7 +407,7 @@ in
             {TreatStream Stream 
                         id(id:ID color:Color name:'Simplest')
                         player(pos:_ map:Input.map state:diving health:Input.maxDamage) 
-                        items(charging:[sonar#0 missile#0 mine#0 drone#0] placed:nil) 
+                        items(charging:[missile#0 mine#0 sonar#0 drone#0] placed:nil) 
                         }
         end
         Port
