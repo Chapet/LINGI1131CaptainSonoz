@@ -45,30 +45,31 @@ in
 
 %%%% Style of game %%%%
 
-   IsTurnByTurn = false
+   IsTurnByTurn = true
 
 %%%% Description of the map %%%%
 
-   NRow = 10
-   NColumn = 10
+   NRow = 8%10
+   NColumn = 8%10
 
-   /*Map = [[0 0 0 0 0 0]
-          [0 0 0 0 0 0]
-          [0 0 0 1 1 0]
-          [0 0 1 1 0 0]
-          [0 0 0 0 0 0]
-          [0 0 0 0 0 0]]
-*/
-   Map = [[0 0 0 0 0 0 0 0 0 0]
-      	  [0 0 0 0 0 0 0 0 0 0]
-      	  [0 0 0 1 1 0 0 0 0 0]
-      	  [0 0 1 1 0 0 1 0 0 0]
-      	  [0 0 0 0 0 0 0 0 0 0]
-      	  [0 0 0 0 0 0 0 0 0 0]
-      	  [0 0 0 1 0 0 1 1 0 0]
-      	  [0 0 1 1 0 0 1 0 0 0]
-      	  [0 0 0 0 0 0 0 0 0 0]
-      	  [0 0 0 0 0 0 0 0 0 0]]
+   % Map = [[0 0 0 0 0 0 0 0 0 0]
+   %    	  [0 0 0 0 0 0 0 0 0 0]
+   %    	  [0 0 0 1 1 0 0 0 0 0]
+   %    	  [0 0 1 1 0 0 1 0 0 0]
+   %    	  [0 0 0 0 0 0 0 0 0 0]
+   %    	  [0 0 0 0 0 0 0 0 0 0]
+   %    	  [0 0 0 1 0 0 1 1 0 0]
+   %    	  [0 0 1 1 0 0 1 0 0 0]
+   %    	  [0 0 0 0 0 0 0 0 0 0]
+   %    	  [0 0 0 0 0 0 0 0 0 0]]
+   Map = [  [0 0 0 0 0 0 0 0]
+            [0 0 1 1 0 0 0 0]
+            [0 1 1 0 0 1 0 0]
+            [0 0 0 0 0 0 0 0]
+            [0 0 0 0 0 0 0 0]
+            [0 0 1 0 0 1 1 0]
+            [0 1 1 0 0 1 0 0]
+            [0 0 0 0 0 0 0 0]]
 
 %%%% Players description %%%%
 
@@ -91,17 +92,17 @@ in
 
 %%%% Number of load for each item %%%%
 
-   Missile = 2
-   Mine = 2
+   Missile = 3
+   Mine = 3
    Sonar = 3
    Drone = 3
 
 %%%% Distances of placement %%%%
 
    MinDistanceMine = 1
-   MaxDistanceMine = 3
+   MaxDistanceMine = 2
    MinDistanceMissile = 1
-   MaxDistanceMissile = 5
+   MaxDistanceMissile = 4
 
 %%%% Waiting time for the GUI between each effect %%%%
 

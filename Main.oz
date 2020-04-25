@@ -103,7 +103,7 @@ in
         % TODO : maybe use a thread to be sure that Send does not block
         % thread
             for J in 1..Input.nbPlayer do
-                if  {Nth PlayerDeadList J} == ~1 then
+                if  {Nth PlayerDeadList J} \= ~1 then
                     {Send {Nth PlayerList J} M}
                 else skip end
             end
@@ -174,7 +174,7 @@ in
                             {GameTurnByTurn endTurn CurrentId {SurfaceListModif Surface CurrentId 2 1} PlayerDeadList} % the turn is over and counts as the first turn spend at the surface
                         else % north east south west
                             {Send GUIPort movePlayer(I P)}
-                            {BroadcastMessage sayMove(I P) PlayerDeadList}
+                            {BroadcastMessage sayMove(I D) PlayerDeadList}
                             {GameTurnByTurn step6 CurrentId Surface PlayerDeadList}
                         end
                     [] step6 then % the submarine is authorised to charge an item
@@ -412,6 +412,7 @@ in
             Id Pos
         in
             {Send P initPosition(Id Pos)}
+            {Browser.browse 'initPosition'#Id#Pos}
             {Send GUIPort initPlayer(Id Pos)}
         end
 

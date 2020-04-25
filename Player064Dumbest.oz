@@ -9,6 +9,7 @@ export
 define
     %InitPlayer
     InitPosition
+    GetID
     Move
     Dive
     ChargeItem
@@ -40,6 +41,14 @@ in
     % State : Done
     fun {InitPosition}
         {RandPosition}
+    end
+
+    fun {GetID ID Player}
+        if Player.health==0 then
+            null
+        else
+            ID
+        end
     end
 
     fun {Move OldPos OldMap OldState}
@@ -319,17 +328,15 @@ in
         [] H|T then
             case H
             of initPosition(I NewPos) then
-                I = ID
+                I = {GetID ID Player}
                 NewPos={InitPosition}
                 {TreatStream T ID player(pos:NewPos map:Input.map state:Player.state health:Player.health) Items}
             [] move(I NewPos Dir) then
                 NewMap NewState
             in
-                %{System.show 'moving'}
                 move(pos:NewPos dir:Dir map:NewMap) = {Move Player.pos Player.map Player.state}
-                %{System.show 'moved'}
 
-                I = ID
+                I = {GetID ID Player}
                 if Dir == surface then NewState=surface
                 else NewState=diving end
 
@@ -340,19 +347,19 @@ in
                 dive(m:NewMap s:NewState) = {Dive Player.map Player.state}
                 {TreatStream T ID player(pos:Player.pos map:NewMap state:NewState health:Player.health) Items}
             [] chargeItem(I KindItem) then 
-                I = ID
+                I = {GetID ID Player}
                 {TreatStream T ID Player items(charging:{ChargeItem Items.charging KindItem} placed:Items.placed)}
             [] fireItem(I KindFire) then 
                 NewChargingItems in
                 NewChargingItems = {FireItem Items.charging Player.pos KindFire}
-                I = ID
+                I = {GetID ID Player}
                 case KindFire 
                 of mine(_) then {TreatStream ID T Player items(charging:NewChargingItems placed:KindFire|Items.placed)}
                 else {TreatStream T ID Player items(charging:NewChargingItems placed:Items.placed)} end             
             [] fireMine(I Mine) then 
                 NewPlacedItems = {FireMine Items.placed Mine}
             in
-                I = ID
+                I = {GetID ID Player}
                 {TreatStream T ID Player items(charging:Items.charging placed:NewPlacedItems)}
             [] isDead(Answer) then 
                 Answer = {IsDead Player.health}
@@ -382,14 +389,14 @@ in
                 [] null then {TreatStream T ID Player Items}
                 else {TreatStream ID T player(pos:Player.pos map:Player.map state:Player.state health:0) Items} end
             [] sayPassingDrone(Drone I Answer) then 
-                I = ID
+                I = {GetID ID Player}
                 Answer = {PassingDrone Drone Player}
                 {TreatStream T ID Player Items}
             [] sayAnswerDrone(Drone I Answer) then 
                 % To be implemented
                 {TreatStream T ID Player Items}
             [] sayPassingSonar(I Answer) then
-                I = ID
+                I = {GetID ID Player}
                 Answer = {PassingSonar Player}
                 {TreatStream T ID Player Items}
             [] sayAnswerSonar(I Answer) then
