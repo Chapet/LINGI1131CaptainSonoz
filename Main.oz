@@ -129,14 +129,16 @@ in
         in
             if I>Input.nbPlayer then PlayerDeadList
             else
-                case Kind
-                of mine then
-                    {Send {Nth PlayerList I} sayMineExplode(AttackerID Position Mes)}
-                    {ExplosionHandling Kind {MessageHandling Mes PlayerDeadList} I+1 AttackerID Position}
-                else  % missile
-                    {Send {Nth PlayerList I} sayMissileExplode(AttackerID Position Mes)}
-                    {ExplosionHandling Kind {MessageHandling Mes PlayerDeadList} I+1 AttackerID Position}
-                end
+                if  {Nth PlayerDeadList I} \= ~1 then
+                    case Kind
+                    of mine then
+                            {Send {Nth PlayerList I} sayMineExplode(AttackerID Position Mes)}
+                            {ExplosionHandling Kind {MessageHandling Mes PlayerDeadList} I+1 AttackerID Position}
+                    else  % missile
+                        {Send {Nth PlayerList I} sayMissileExplode(AttackerID Position Mes)}
+                        {ExplosionHandling Kind {MessageHandling Mes PlayerDeadList} I+1 AttackerID Position}
+                    end
+                else {ExplosionHandling Kind PlayerDeadList I+1 AttackerID Position} end
             end
     end
 
@@ -412,7 +414,6 @@ in
             Id Pos
         in
             {Send P initPosition(Id Pos)}
-            {Browser.browse 'initPosition'#Id#Pos}
             {Send GUIPort initPlayer(Id Pos)}
         end
 
@@ -437,20 +438,6 @@ in
         end
 
         {System.show '======= Main finished ======='}
-        for P in PlayerList do % the players choose their position & appear on the grid
-            Answer
-        in
-            {Send P isDead(Answer)}
-            if Answer then 
-                ID Pos in
-                {Send P initPosition(ID Pos)}
-                {Browser.browse dead#ID}
-            else 
-                ID Pos in
-                {Send P initPosition(ID Pos)}
-                {Browser.browse winner#ID}
-            end
-        end
     end
 
     {Main}

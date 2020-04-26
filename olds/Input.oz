@@ -1,6 +1,4 @@
 functor
-import
-   OS
 export
    isTurnByTurn:IsTurnByTurn
    nRow:NRow
@@ -43,35 +41,7 @@ define
    MinDistanceMissile
    MaxDistanceMissile
    GUIDelay
-
-   MapGenerator
-   IslandCoefficient
-   UseMapGenerator
-   DefaultMap
 in
-   fun {MapGenerator}
-         fun {WhichType}
-               Rand = {OS.rand} mod 100
-               Coeff
-            in
-               if IslandCoefficient<0 orelse IslandCoefficient>25 then Coeff=15
-               else Coeff = IslandCoefficient end
-               
-               if Rand < Coeff then 1
-               else 0 end
-         end
-         fun {LoopRow R}
-            if R>NRow then nil
-            else {LoopCol 1}|{LoopRow R+1} end
-         end
-         fun {LoopCol C}
-            if C>NColumn then nil
-            else {WhichType}|{LoopCol C+1} end
-         end
-      in
-         if UseMapGenerator then {LoopRow 1}
-         else DefaultMap end
-   end
 
 %%%% Style of game %%%%
 
@@ -79,23 +49,27 @@ in
 
 %%%% Description of the map %%%%
 
-   NRow = 10
-   NColumn = 10
-   IslandCoefficient = 15 % Between 0 and 25
-   UseMapGenerator = true % if false, make sure that NRow and NColumn match the default map
+   NRow = 8%10
+   NColumn = 8%10
 
-   DefaultMap = [[0 0 0 0 0 0 0 0 0 0]
-                 [0 0 0 0 0 0 0 0 0 0]
-                 [0 0 0 1 1 0 0 0 0 0]
-                 [0 0 1 1 0 0 1 0 0 0]
-                 [0 0 0 0 0 0 0 0 0 0]
-                 [0 0 0 0 0 0 0 0 0 0]
-                 [0 0 0 1 0 0 1 1 0 0]
-                 [0 0 1 1 0 0 1 0 0 0]
-                 [0 0 0 0 0 0 0 0 0 0]
-                 [0 0 0 0 0 0 0 0 0 0]]
-
-   Map = {MapGenerator}
+   % Map = [[0 0 0 0 0 0 0 0 0 0]
+   %    	  [0 0 0 0 0 0 0 0 0 0]
+   %    	  [0 0 0 1 1 0 0 0 0 0]
+   %    	  [0 0 1 1 0 0 1 0 0 0]
+   %    	  [0 0 0 0 0 0 0 0 0 0]
+   %    	  [0 0 0 0 0 0 0 0 0 0]
+   %    	  [0 0 0 1 0 0 1 1 0 0]
+   %    	  [0 0 1 1 0 0 1 0 0 0]
+   %    	  [0 0 0 0 0 0 0 0 0 0]
+   %    	  [0 0 0 0 0 0 0 0 0 0]]
+   Map = [  [0 0 0 0 0 0 0 0]
+            [0 0 1 1 0 0 0 0]
+            [0 1 1 0 0 1 0 0]
+            [0 0 0 0 0 0 0 0]
+            [0 0 0 0 0 0 0 0]
+            [0 0 1 0 0 1 1 0]
+            [0 1 1 0 0 1 0 0]
+            [0 0 0 0 0 0 0 0]]
 
 %%%% Players description %%%%
 
