@@ -432,7 +432,7 @@ in
                                 of C|Cs then 
                                     if J==Y then (~1)|Cs
                                     else C|{LockCol J+1 Cs} end
-                                    else nil end
+                                else nil end
                             end
                         in
                             {LockRow 1 M}
@@ -464,9 +464,14 @@ in
                                 M
                             else {DeduceStartPoint A B T M NewFree CurrentFree} end
                         else
-                            NewFree = CurrentFree-1
-                            %{System.show 'locking position -> new free'#NewFree} 
-                            {LockPosition X Y M} 
+                            if {IsImpossibleSlot X Y M} then
+                                NewFree = CurrentFree 
+                                M
+                            else
+                                NewFree = CurrentFree-1
+                                %{System.show 'locking position -> new free'#NewFree} 
+                                {LockPosition X Y M} 
+                            end
                         end
                     end
                     fun {CheckPositions X Y OldMap CurrentFree}
