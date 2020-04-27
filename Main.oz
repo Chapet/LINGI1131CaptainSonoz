@@ -4,7 +4,6 @@ import
     Input
     PlayerManager
     System
-    Browser
     OS
 define
     GUIPort = {GUI.portWindow} % Starting the GUI port window
@@ -295,7 +294,7 @@ in
                         {SimulGaming step1 CurrentId Input.turnSurface} % the turn is over and counts as the first turn spend at the surface
                     else % north east south west
                         {Send GUIPort movePlayer(I P)}
-                        {BroadcastMessage sayMove(I P) PlayerDeadList}
+                        {BroadcastMessage sayMove(I D) PlayerDeadList}
                         {SimulGaming step6 CurrentId Surface}
                     end
                 [] step6 then % the submarine is authorised to charge an item

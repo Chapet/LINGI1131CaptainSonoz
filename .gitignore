@@ -9,9 +9,9 @@ PlayerManager.ozf
 
 builds/
 
-PlayerBasicAI.ozf
+*.ozf
 
-explosion.ppm
+PlayerBasicAI.ozf
 
 Player064Dumbest.ozf
 

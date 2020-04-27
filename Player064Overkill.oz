@@ -3,7 +3,6 @@ import
     Input
     System
     OS
-    Browser
 export
     portPlayer:StartPlayer
 define
@@ -640,6 +639,7 @@ in
                 {TreatStream T ID Player Items Others}
             [] sayMove(I Dir) then 
                 NewOthers = {UpdateDirections I.id Dir Others} in
+                {System.show overkill#H}
                 {System.show '===== new others ====='}
                 for Other in NewOthers do
                     {System.show 'Other is alive '#Other.alive}

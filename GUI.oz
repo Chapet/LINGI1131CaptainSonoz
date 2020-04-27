@@ -7,6 +7,9 @@ export
 	portWindow:StartWindow
 define
 	ExplosionImage = {QTk.newImage photo(file:'explosion.ppm')}
+	DroneImage = {QTk.newImage photo(file:'drone.ppm')}
+	SubmarineImage = {QTk.newImage photo(file:'submarine.ppm')}
+	MineImage = {QTk.newImage photo(file:'mine.ppm')}
 
 	StartWindow
 	TreatStream
@@ -112,7 +115,7 @@ in
 		pt(x:X y:Y) = Position
 		id(id:Id color:Color name:_) = ID
 
-		LabelSub = label(text:'S' handle:Handle borderwidth:5 relief:raised bg:Color ipadx:5 ipady:5)
+		LabelSub = label(image:SubmarineImage handle:Handle borderwidth:5 relief:raised bg:Color ipadx:5 ipady:5)
 		LabelScore = label(text:Input.maxDamage borderwidth:5 handle:HandleScore relief:solid bg:Color ipadx:5 ipady:5)
 		HandlePath = {DrawPath Grid Color X Y}
 		{Grid.grid configure(LabelSub row:X+1 column:Y+1 sticky:wesn)}
@@ -143,7 +146,7 @@ in
 			in
 			guiPlayer(id:ID score:HandleScore submarine:Handle mines:Mine path:Path) = State
 			pt(x:X y:Y) = Position
-			LabelMine = label(text:"M" handle:HandleMine borderwidth:5 relief:raised bg:ID.color ipadx:5 ipady:5)
+			LabelMine = label(image:MineImage handle:HandleMine borderwidth:5 relief:raised bg:ID.color ipadx:5 ipady:5)
 			{Grid.grid configure(LabelMine row:X+1 column:Y+1)}
 			{HandleMine 'raise'()}
 			{Handle 'raise'()}
@@ -246,8 +249,8 @@ in
 			if Current > Max then skip
 			else
 				Handle in
-				if IsRow then {Grid.grid configure(label(text:'D' handle:Handle borderwidth:2 relief:raised bg:c(255 255 255) ipadx:4 ipady:4) row:Position+1 column:Current+1)} 
-				else {Grid.grid configure(label(text:'D' handle:Handle borderwidth:2 relief:raised bg:c(255 255 255) ipadx:4 ipady:4) row:Current+1 column:Position+1)} end
+				if IsRow then {Grid.grid configure(label(image:DroneImage handle:Handle borderwidth:2 relief:raised bg:c(255 255 255) ipadx:5 ipady:5) row:Position+1 column:Current+1)} 
+				else {Grid.grid configure(label(image:DroneImage handle:Handle borderwidth:2 relief:raised bg:c(255 255 255) ipadx:5 ipady:5) row:Current+1 column:Position+1)} end
 				thread {Delay Input.guiDelay} {RemoveItem Grid Handle} end
 				{Sweep IsRow Position Current+1 Max}
 			end
