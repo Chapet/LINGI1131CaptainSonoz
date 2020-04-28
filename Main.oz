@@ -407,7 +407,7 @@ in
 
         {System.show PlayerList}
 
-        {Send GUIPort buildWindow(withMapGenerator)}
+        {Send GUIPort buildWindow}
 
         for P in PlayerList do % the players choose their position & appear on the grid
             Id Pos

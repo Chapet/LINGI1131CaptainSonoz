@@ -44,12 +44,11 @@ define
    MaxDistanceMissile
    GUIDelay
 
-   MapGenerator
-   IslandCoefficient
+   InitMap
    UseMapGenerator
    DefaultMap
 in
-   proc {MapGenerator}
+   proc {InitMap}
       if UseMapGenerator then skip
       else Map = DefaultMap end
    end
@@ -62,8 +61,7 @@ in
 
    NRow = 10
    NColumn = 10
-   IslandCoefficient = 12 % Between 0 and 25
-   UseMapGenerator = true % if false, make sure that NRow and NColumn match the default map
+   UseMapGenerator = false % if false, make sure that NRow and NColumn match the default map
 
    DefaultMap = [[0 0 0 0 0 0 0 0 0 0]
                  [0 0 0 0 0 0 0 0 0 0]
@@ -76,7 +74,7 @@ in
                  [0 0 0 0 0 0 0 0 0 0]
                  [0 0 0 0 0 0 0 0 0 0]]
 
-   {MapGenerator} % Map
+   {InitMap} % Map
 
 %%%% Players description %%%%
 
@@ -95,7 +93,7 @@ in
 
 %%%% Life %%%%
 
-   MaxDamage = 2
+   MaxDamage = 4
 
 %%%% Number of load for each item %%%%
 

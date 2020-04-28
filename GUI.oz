@@ -25,6 +25,7 @@ define
 	GeneratorPort
 	MapGenerator
 	IslandCoefficient = 12
+	UseMapGenerator = false
 
 	NRow = Input.nRow
 	NColumn = Input.nColumn
@@ -388,12 +389,13 @@ in
 		case Stream
 		of nil then skip
 		[] buildWindow|T then NewGrid in
-			NewGrid = {BuildWindow false}			
-			{TreatStream T NewGrid State}
-		[] buildWindow(withMapGenerator)|T then
-			NewGrid = {BuildWindow true} in
-			GeneratorPort = {NewPort GeneratorStream}
-			{GenerateMap GeneratorStream NewGrid Input.map}
+			if UseMapGenerator then
+				NewGrid = {BuildWindow true}
+				GeneratorPort = {NewPort GeneratorStream}
+				{GenerateMap GeneratorStream NewGrid Input.map}
+			else 
+				NewGrid = {BuildWindow false}	
+			end		
 			{TreatStream T NewGrid State}
 		[] initPlayer(ID Position)|T then NewState in
 			%{System.show guiStream#ID#Position}
