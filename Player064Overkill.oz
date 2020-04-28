@@ -14,6 +14,8 @@ define
     Dive
     ChargeItem
     FireItem
+    AllPossibleInitPositions
+    ReversePath
     FireMine
     IsDead
     MissileExploded
@@ -59,7 +61,7 @@ in
     fun {InitOthers I Acc NbStarts}
         if I>Input.nbPlayer then Acc
         else 
-            {InitOthers I+1 other(alive:true path:nil map:Input.map nbStarts:NbStarts)|Acc NbStarts}
+            {InitOthers I+1 other(alive:true path:nil map:Input.map nbStarts:NbStarts found:false currentPos:nil)|Acc NbStarts}
         end
     end
 
@@ -166,6 +168,46 @@ in
         end
     end
 
+    fun {AllPossibleInitPositions Other}
+            fun {IsPossibleSlot X Y M}
+                    fun {Get N M}
+                        case M
+                        of H|T then
+                            if N==1 then H
+                            else {Get N-1 T} end
+                        else indexOutOfBound end
+                    end
+                    Row 
+                    Slot
+                in
+                    Row = {Get X M}
+                    Slot = {Get Y Row}
+                    if Slot==0 then true
+                    else false end
+            end
+            fun {SelectOnMap X Y Map Acc}
+                if Y>Input.nColumn then
+                    if X==Input.nRow then Acc
+                    else {SelectOnMap X+1 1 Map Acc} end
+                else
+                    if {IsPossibleSlot X Y Map} then {SelectOnMap X Y+1 Map pt(x:X y:Y)|Acc} 
+                    else {SelectOnMap X Y+1 Map Acc} end
+                end
+            end
+        in
+            case Other
+            of other(alive:_ path:_ map:M nbStarts:_ found:_ currentPos:_) then {SelectOnMap 1 1 M nil} end
+    end
+
+    fun {ReversePath Path Position}
+        case Path
+        of north|T then {ReversePath T pt(x:Position.x-1 y:Position.y)}
+        [] east|T then {ReversePath T pt(x:Position.x y:Position.y+1)}
+        [] south|T then {ReversePath T pt(x:Position.x+1 y:Position.y)}
+        [] west|T then {ReversePath T pt(x:Position.x y:Position.y-1)}
+        else Position end
+    end
+
     fun {FireItem ChargingItems PlayerPos Fired Others}
             fun {Fire Kind}
                     fun {SelectPlayers NbStartingPos Others Acc}
@@ -175,51 +217,11 @@ in
                             else {SelectPlayers NbStartingPos T Acc} end
                         else Acc end
                     end
-                    fun {AllPossibleInitPositions Other Min Max}
-                            fun {IsPossibleSlot X Y M}
-                                    fun {Get N M}
-                                        case M
-                                        of H|T then
-                                            if N==1 then H
-                                            else {Get N-1 T} end
-                                        else indexOutOfBound end
-                                    end
-                                    Row 
-                                    Slot
-                                in
-                                    Row = {Get X M}
-                                    Slot = {Get Y Row}
-                                    if Slot==0 then true
-                                    else true end
-                            end
-                            fun {SelectOnMap X Y Map Acc}
-                                if Y>Input.nColumn then
-                                    if X==Input.nRow then Acc
-                                    else {SelectOnMap X+1 1 Map Acc} end
-                                else
-                                    if {IsPossibleSlot X Y Map} then {SelectOnMap X Y+1 Map pt(x:X y:Y)|Acc} 
-                                    else {SelectOnMap X Y+1 Map Acc} end
-                                end
-                            end
-                        in
-                            case Other
-                            of other(alive:_ path:_ map:M nbStarts:_) then {SelectOnMap 1 1 M nil} end
-                    end
-                    fun {ReversePath Path Position}
-                        case Path
-                        of north|T then {ReversePath T pt(x:Position.x+1 y:Position.y)}
-                        [] east|T then {ReversePath T pt(x:Position.x y:Position.y-1)}
-                        [] south|T then {ReversePath T pt(x:Position.x-1 y:Position.y)}
-                        [] west|T then {ReversePath T pt(x:Position.x y:Position.y+1)}
-                        else Position end
-                    end
                     fun {WithinReach Position MinRange MaxRange}
                         if {ManhattanDistance PlayerPos Position} =< MaxRange + 1 andthen {ManhattanDistance PlayerPos Position} >= MinRange-1 then true
                         else false end
                     end
                     fun {Loop N Type}
-                        % if I>N then null
-                        % else
                         BestOpponentPosition MinRange MaxRange in
                         if Type==missile then MinRange=Input.minDistanceMissile MaxRange=Input.maxDistanceMissile 
                         else MinRange=Input.minDistanceMine MaxRange=Input.maxDistanceMine end
@@ -228,21 +230,25 @@ in
                             if I=<N then
                                 Opponents = {SelectPlayers I Others nil} in
                                 for Opp in Opponents do % Every opponent with maximum I starting points
-                                    InitPositions = {AllPossibleInitPositions Opp MinRange MaxRange} in
-                                    for InitPos in InitPositions do % Every possible starting point for opponent Opp
-                                        CurrentPos = {ReversePath Opp.path InitPos} in
-                                        if {WithinReach CurrentPos MinRange MaxRange} andthen {IsFreeSlot CurrentPos.x CurrentPos.y Input.map} then BestOpponentPosition = CurrentPos {Break} end
+                                    if Opp.found then 
+                                        if {WithinReach Opp.currentPos MinRange MaxRange} andthen {IsFreeSlot Opp.currentPos.x Opp.currentPos.y Input.map} then 
+                                            BestOpponentPosition = Opp.currentPos 
+                                            {Break} 
+                                        end
+                                    else 
+                                        InitPositions = {AllPossibleInitPositions Opp} in
+                                        for InitPos in InitPositions do % Every possible starting point for opponent Opp
+                                            CurrentPos = {ReversePath Opp.path InitPos} in
+                                            if {WithinReach CurrentPos MinRange MaxRange} andthen {IsFreeSlot CurrentPos.x CurrentPos.y Input.map} then 
+                                                BestOpponentPosition = CurrentPos 
+                                                {Break} 
+                                            end
+                                        end
                                     end
                                 end
                             else BestOpponentPosition = null end
                         end
                         BestOpponentPosition
-                            % if Other \= null then 
-                            %     InitPositions = {AllPossibleInitPositions Other Min Max nil} in
-                            %     if InitPos \= null then {ReversePath Other.path InitPos}
-                            %     else {Loop I+1 N Min Max} end
-                            % else {Loop I+1 N Min Max} end 
-                        %end
                     end
                     fun {RandomPosition Min Max}
                             X Y SgnX SgnY Pt IsFree
@@ -291,20 +297,28 @@ in
                             pt(x:X y:Y)
                     end
                     fun {LaunchMine}
-                            N = (Input.nRow * Input.nColumn) div 5
+                            N = (Input.nRow * Input.nColumn) div 10
                             OppPosition = {Loop N mine}
                         in     
                             {System.show '===== mine -> OppPosition'#OppPosition#' with N '#N#' ====='}              
                             if OppPosition==null then null %mine({RandomPosition Input.minDistanceMine  Input.maxDistanceMine})
-                            else mine({FindHitPosition OppPosition Input.minDistanceMine Input.maxDistanceMine}) end
+                            else 
+                                HitPos = {FindHitPosition OppPosition Input.minDistanceMine Input.maxDistanceMine} in
+                                if {ManhattanDistance HitPos PlayerPos} >= 2 then mine(HitPos)
+                                else null end 
+                            end
                     end
                     fun {LaunchMissile}                                  
-                            N = (Input.nRow * Input.nColumn) div 5
+                            N = (Input.nRow * Input.nColumn) div 10
                             OppPosition = {Loop N missile}
                         in   
                             {System.show '===== missile -> OppPosition'#OppPosition#' with N '#N#' ====='}                     
                             if OppPosition==null then null %missile({RandomPosition Input.minDistanceMissile  Input.maxDistanceMissile})
-                            else missile({FindHitPosition OppPosition Input.minDistanceMissile Input.maxDistanceMissile}) end
+                            else 
+                                HitPos = {FindHitPosition OppPosition Input.minDistanceMissile Input.maxDistanceMissile} in
+                                if {ManhattanDistance HitPos PlayerPos} >= 2 then missile(HitPos)
+                                else null end 
+                            end
                     end
                     fun {LaunchDrone}
                             B = {OS.rand} mod 2
@@ -332,9 +346,7 @@ in
                 case H
                 of Type#Charges then
                     if Charges==Input.Type then 
-                        {System.show '===== firing'#Type#' ====='}
                         Fired={Fire Type} 
-                        {System.show '===== fired'#Fired#' ====='}
                         if Fired \= null then (Type#0)|T
                         else H|T end
                     else H|{FireItem T PlayerPos Fired Others} end
@@ -504,10 +516,28 @@ in
                 of H|T then 
                     if I==ID then 
                         NewNbStarts in
-                        if H.alive andthen H.nbStarts > 1 then
+                        if H.found then
+                            NewPos in
+                            case Dir
+                            of north then NewPos = pt(x:H.currentPos.x-1 y:H.currentPos.y)
+                            [] east then NewPos = pt(x:H.currentPos.x y:H.currentPos.y+1)
+                            [] south then NewPos = pt(x:H.currentPos.x+1 y:H.currentPos.y)
+                            [] west then NewPos = pt(x:H.currentPos.x y:H.currentPos.y-1)
+                            else NewPos = H.currentPos end
+                            {System.show '===== Player '#I#' currently there '#NewPos#' ====='} 
+                            other(alive:H.alive path:Dir|H.path map:H.map nbStarts:H.nbStarts found:true currentPos:NewPos)|T
+                        elseif H.alive andthen H.nbStarts > 1 then
                             Tmp = {UpdateOtherMap H.map Dir|H.path NewNbStarts H.nbStarts} in 
-                            if NewNbStarts < 2 then {System.show '===== player found '#I#' ====='} {SweepPrintRow Tmp} end
-                            other(alive:H.alive path:Dir|H.path map:Tmp nbStarts:NewNbStarts)|T
+                            if NewNbStarts < 2 then 
+                                    Other = other(alive:H.alive path:Dir|H.path map:Tmp nbStarts:NewNbStarts found:true currentPos:CurrentPos)
+                                    InitPositions = {AllPossibleInitPositions Other}
+                                    CurrentPos = {ReversePath Other.path InitPositions.1}
+                                in
+                                    {System.show '===== player found '#I#' ====='} 
+                                    {System.show '===== currently there '#CurrentPos#' ====='} 
+                                    {SweepPrintRow Tmp}
+                                    Other|T
+                            else other(alive:H.alive path:Dir|H.path map:Tmp nbStarts:NewNbStarts found:false currentPos:nil)|T end
                         else H|T end
                     else H|{SearchPlayer I+1 T} end
                 else nil end
@@ -639,13 +669,6 @@ in
                 {TreatStream T ID Player Items Others}
             [] sayMove(I Dir) then 
                 NewOthers = {UpdateDirections I.id Dir Others} in
-                {System.show overkill#H}
-                {System.show '===== new others ====='}
-                for Other in NewOthers do
-                    {System.show 'Other is alive '#Other.alive}
-                    {System.show 'Other nb starts '#Other.nbStarts}
-                end
-                {System.show '===== new others ====='}
                 {TreatStream T ID Player Items NewOthers}
             [] saySurface(I) then 
                 {TreatStream T ID Player Items {UpdateDirections I surface Others}}

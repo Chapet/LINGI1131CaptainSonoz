@@ -413,6 +413,8 @@ in
             Id Pos
         in
             {Send P initPosition(Id Pos)}
+            {Wait Id}
+            {Wait Pos}
             {System.show initPosition#Id#Pos}
             {Send GUIPort initPlayer(Id Pos)}
         end
@@ -438,6 +440,13 @@ in
         end
 
         {System.show '======= Main finished ======='}
+        for I in 1..Input.nbPlayer do
+            Answer in
+            {Send {Nth PlayerList I} isDead(Answer)}
+            {Wait Answer}
+            if Answer then {System.show dead#'Player nb. '#I}
+            else {System.show winner#'Player nb. '#I} end
+        end
     end
 
     {Main}
