@@ -407,12 +407,13 @@ in
 
         {System.show PlayerList}
 
-        {Send GUIPort buildWindow}
+        {Send GUIPort buildWindow(withMapGenerator)}
 
         for P in PlayerList do % the players choose their position & appear on the grid
             Id Pos
         in
             {Send P initPosition(Id Pos)}
+            {System.show initPosition#Id#Pos}
             {Send GUIPort initPlayer(Id Pos)}
         end
 

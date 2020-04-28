@@ -49,39 +49,20 @@ define
    UseMapGenerator
    DefaultMap
 in
-   fun {MapGenerator}
-         fun {WhichType}
-               Rand = {OS.rand} mod 100
-               Coeff
-            in
-               if IslandCoefficient<0 orelse IslandCoefficient>25 then Coeff=15
-               else Coeff = IslandCoefficient end
-               
-               if Rand < Coeff then 1
-               else 0 end
-         end
-         fun {LoopRow R}
-            if R>NRow then nil
-            else {LoopCol 1}|{LoopRow R+1} end
-         end
-         fun {LoopCol C}
-            if C>NColumn then nil
-            else {WhichType}|{LoopCol C+1} end
-         end
-      in
-         if UseMapGenerator then {LoopRow 1}
-         else DefaultMap end
+   proc {MapGenerator}
+      if UseMapGenerator then skip
+      else Map = DefaultMap end
    end
 
 %%%% Style of game %%%%
 
-   IsTurnByTurn = false
+   IsTurnByTurn = true
 
 %%%% Description of the map %%%%
 
    NRow = 10
    NColumn = 10
-   IslandCoefficient = 15 % Between 0 and 25
+   IslandCoefficient = 12 % Between 0 and 25
    UseMapGenerator = true % if false, make sure that NRow and NColumn match the default map
 
    DefaultMap = [[0 0 0 0 0 0 0 0 0 0]
@@ -95,7 +76,7 @@ in
                  [0 0 0 0 0 0 0 0 0 0]
                  [0 0 0 0 0 0 0 0 0 0]]
 
-   Map = {MapGenerator}
+   {MapGenerator} % Map
 
 %%%% Players description %%%%
 

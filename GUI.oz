@@ -3,6 +3,7 @@ import
 	QTk at 'x-oz://system/wp/QTk.ozf'
 	Input
 	System
+	OS
 export
 	portWindow:StartWindow
 define
@@ -19,6 +20,11 @@ define
 	RemovePlayer
 
 	Map = Input.map
+	GenerateMap
+	GeneratorStream
+	GeneratorPort
+	MapGenerator
+	IslandCoefficient = 12
 
 	NRow = Input.nRow
 	NColumn = Input.nColumn
@@ -43,11 +49,48 @@ define
 	UpdateLife
 in
 
+%%%%% Build the map %%%%%
+
+	fun {MapGenerator}
+			fun {WhichType}
+				Rand = {OS.rand} mod 100
+				Coeff
+				in
+				if IslandCoefficient<0 orelse IslandCoefficient>25 then Coeff=12
+				else Coeff = IslandCoefficient end
+				
+				if Rand < Coeff then 1
+				else 0 end
+			end
+			fun {LoopRow R}
+				if R>Input.nRow then nil
+				else {LoopCol 1}|{LoopRow R+1} end
+			end
+			fun {LoopCol C}
+				if C>Input.nColumn then nil
+				else {WhichType}|{LoopCol C+1} end
+			end
+		in
+			{LoopRow 1}
+	end
+
+	proc {GenerateMap S G M}
+		case S
+		of regen|T then 
+			NewMap = {MapGenerator} in
+			{DrawMap G.grid NewMap}
+			{GenerateMap T G NewMap}
+		[] ok|T then Input.map = M
+		else skip end
+	end
+
 %%%%% Build the initial window and set it up (call only once)
-	fun{BuildWindow}
+	fun{BuildWindow WithMapGenerator}
 		Grid GridScore SonarText Toolbar Desc DescScore Window
 	in
-		Toolbar=lr(glue:we tbbutton(text:"Quit" glue:w action:toplevel#close) label(handle:SonarText text:' ' glue:n))
+		if WithMapGenerator then 
+			Toolbar=lr(glue:we tbbutton(text:"Quit" glue:w action:toplevel#close) label(handle:SonarText text:' ' glue:n) tbbutton(text:"Regen" glue:e action:GeneratorPort#regen) tbbutton(text:"Ok" glue:e action:GeneratorPort#ok))
+		else Toolbar=lr(glue:we tbbutton(text:"Quit" glue:w action:toplevel#close) label(handle:SonarText text:' ' glue:n)) end
 		Desc=grid(handle:Grid height:500 width:500)
 		DescScore=grid(handle:GridScore height:100 width:500)
 		Window={QTk.build td(Toolbar Desc DescScore)}
@@ -71,7 +114,8 @@ in
 			{GridScore columnconfigure(N minsize:50 weight:0 pad:5)}
 		end
 
-		{DrawMap Grid}
+		if WithMapGenerator then skip
+		else {DrawMap Grid Map} end
 
 		handle(grid:Grid score:GridScore sonar:SonarText)
 	end
@@ -87,7 +131,7 @@ in
 	end
 
 %%%%% Function to draw the map
-	proc{DrawMap Grid}
+	proc{DrawMap Grid Map}
 		proc{DrawColumn Column M N}
 			case Column
 			of nil then skip
@@ -344,7 +388,12 @@ in
 		case Stream
 		of nil then skip
 		[] buildWindow|T then NewGrid in
-			NewGrid = {BuildWindow}
+			NewGrid = {BuildWindow false}			
+			{TreatStream T NewGrid State}
+		[] buildWindow(withMapGenerator)|T then
+			NewGrid = {BuildWindow true} in
+			GeneratorPort = {NewPort GeneratorStream}
+			{GenerateMap GeneratorStream NewGrid Input.map}
 			{TreatStream T NewGrid State}
 		[] initPlayer(ID Position)|T then NewState in
 			%{System.show guiStream#ID#Position}
